@@ -1,9 +1,12 @@
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, Platform, ImageBackground, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, Platform, ImageBackground, Dimensions, Switch } from 'react-native';
+import { useState } from 'react';
 
 const { width, height } = Dimensions.get('window');
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
+import { useGame } from '@/contexts/GameContext';
 import {
   User,
   LogOut,
@@ -13,11 +16,34 @@ import {
   ChevronRight,
   Zap,
   Info,
+  Wallet,
+  Bell,
+  Globe,
+  Link2,
+  Gift,
+  Copy,
+  ExternalLink,
+  Twitter,
+  MessageCircle,
+  Lock,
+  Coins,
+  TrendingUp,
+  Users,
+  Check,
 } from 'lucide-react-native';
 
 export default function SettingsScreen() {
   const router = useRouter();
   const { user, profile, signOut } = useAuth();
+  const { userHeroes } = useGame();
+  const [pushNotifications, setPushNotifications] = useState(true);
+  const [emailNotifications, setEmailNotifications] = useState(false);
+
+  const activeHeroes = userHeroes.filter(h => h.is_active);
+  const totalEarningRate = activeHeroes.reduce(
+    (sum, h) => sum + h.heroes.hero_rarities.supercash_per_hour,
+    0
+  );
 
   const handleSignOut = () => {
     if (Platform.OS === 'web') {
@@ -42,29 +68,80 @@ export default function SettingsScreen() {
     }
   };
 
-  const menuItems = [
+  const handleCopyReferral = () => {
+    // Copy referral code logic
+    Alert.alert('Copied!', 'Referral code copied to clipboard');
+  };
+
+  const generalMenuItems = [
     {
       icon: User,
       title: 'Account',
-      description: 'Manage your account settings',
+      description: 'Manage your profile',
+      color: '#FBBF24',
       onPress: () => {},
     },
     {
       icon: Shield,
       title: 'Privacy & Security',
-      description: 'Control your privacy settings',
+      description: 'Password & 2FA',
+      color: '#22C55E',
       onPress: () => {},
     },
     {
+      icon: Globe,
+      title: 'Language',
+      description: 'English (US)',
+      color: '#3B82F6',
+      onPress: () => {},
+    },
+  ];
+
+  const web3MenuItems = [
+    {
+      icon: Wallet,
+      title: 'Connect Wallet',
+      description: 'Link your Web3 wallet',
+      color: '#8B5CF6',
+      badge: 'New',
+      onPress: () => {},
+    },
+    {
+      icon: Lock,
+      title: 'Staking Settings',
+      description: 'Auto-stake preferences',
+      color: '#F59E0B',
+      onPress: () => {},
+    },
+    {
+      icon: Link2,
+      title: 'NFT Settings',
+      description: 'Marketplace preferences',
+      color: '#EC4899',
+      onPress: () => {},
+    },
+  ];
+
+  const supportMenuItems = [
+    {
       icon: HelpCircle,
-      title: 'Help & Support',
-      description: 'Get help with HeroVerse',
+      title: 'Help Center',
+      description: 'FAQs & tutorials',
+      color: '#06B6D4',
+      onPress: () => {},
+    },
+    {
+      icon: MessageCircle,
+      title: 'Contact Support',
+      description: 'Get help from our team',
+      color: '#10B981',
       onPress: () => {},
     },
     {
       icon: Info,
-      title: 'About',
-      description: 'Learn more about HeroVerse',
+      title: 'About HeroVerse',
+      description: 'Version & legal info',
+      color: '#6366F1',
       onPress: () => {},
     },
   ];
@@ -78,47 +155,250 @@ export default function SettingsScreen() {
       <View style={styles.overlay}>
       <SafeAreaView style={styles.safeArea}>
         <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+          {/* Profile Card */}
           <View style={styles.profileCard}>
-            <View style={styles.profileAvatar}>
-              <Zap color="#FBBF24" size={32} />
+            <View style={styles.profileHeader}>
+              <View style={styles.profileAvatar}>
+                <Zap color="#FBBF24" size={28} />
+              </View>
+              <View style={styles.profileInfo}>
+                <Text style={styles.profileName}>
+                  {profile?.username || user?.email?.split('@')[0] || 'Hero'}
+                </Text>
+                <View style={styles.profileEmail}>
+                  <Mail color="#64748B" size={12} />
+                  <Text style={styles.profileEmailText}>{user?.email}</Text>
+                </View>
+              </View>
+              <TouchableOpacity style={styles.editButton}>
+                <Text style={styles.editButtonText}>Edit</Text>
+              </TouchableOpacity>
             </View>
-            <View style={styles.profileInfo}>
-              <Text style={styles.profileName}>
-                {profile?.username || user?.email?.split('@')[0] || 'Hero'}
-              </Text>
-              <View style={styles.profileEmail}>
-                <Mail color="#64748B" size={14} />
-                <Text style={styles.profileEmailText}>{user?.email}</Text>
+            <View style={styles.profileStats}>
+              <View style={styles.profileStatItem}>
+                <Coins color="#FBBF24" size={14} />
+                <Text style={styles.profileStatValue}>{(profile?.supercash_balance || 0).toLocaleString()}</Text>
+                <Text style={styles.profileStatLabel}>SuperCash</Text>
+              </View>
+              <View style={styles.profileStatDivider} />
+              <View style={styles.profileStatItem}>
+                <Users color="#22C55E" size={14} />
+                <Text style={styles.profileStatValue}>{userHeroes.length}</Text>
+                <Text style={styles.profileStatLabel}>Heroes</Text>
+              </View>
+              <View style={styles.profileStatDivider} />
+              <View style={styles.profileStatItem}>
+                <TrendingUp color="#3B82F6" size={14} />
+                <Text style={styles.profileStatValue}>{totalEarningRate}</Text>
+                <Text style={styles.profileStatLabel}>SC/hr</Text>
               </View>
             </View>
           </View>
 
-          <View style={styles.menuSection}>
-            {menuItems.map((item, index) => (
-              <TouchableOpacity
-                key={index}
-                style={styles.menuItem}
-                onPress={item.onPress}
-              >
-                <View style={styles.menuIconContainer}>
-                  <item.icon color="#FBBF24" size={22} />
+          {/* Wallet Section */}
+          <TouchableOpacity style={styles.walletBanner}>
+            <LinearGradient
+              colors={['rgba(139, 92, 246, 0.3)', 'rgba(59, 130, 246, 0.3)']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.walletBannerGradient}
+            >
+              <View style={styles.walletBannerIcon}>
+                <Wallet color="#FFFFFF" size={22} />
+              </View>
+              <View style={styles.walletBannerText}>
+                <Text style={styles.walletBannerTitle}>Connect Wallet</Text>
+                <Text style={styles.walletBannerDesc}>Enable Web3 features & earn $HERO</Text>
+              </View>
+              <ChevronRight color="#FFFFFF" size={18} />
+            </LinearGradient>
+          </TouchableOpacity>
+
+          {/* Referral Section */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Referral Program</Text>
+            <View style={styles.referralCard}>
+              <View style={styles.referralHeader}>
+                <View style={styles.referralIconContainer}>
+                  <Gift color="#FBBF24" size={20} />
                 </View>
-                <View style={styles.menuContent}>
-                  <Text style={styles.menuTitle}>{item.title}</Text>
-                  <Text style={styles.menuDescription}>{item.description}</Text>
+                <View style={styles.referralInfo}>
+                  <Text style={styles.referralTitle}>Invite Friends & Earn</Text>
+                  <Text style={styles.referralDesc}>Get 100 $HERO for each friend</Text>
                 </View>
-                <ChevronRight color="#64748B" size={20} />
-              </TouchableOpacity>
-            ))}
+              </View>
+              <View style={styles.referralCodeContainer}>
+                <Text style={styles.referralCodeLabel}>Your Referral Code</Text>
+                <View style={styles.referralCodeBox}>
+                  <Text style={styles.referralCode}>HERO{profile?.id?.slice(0, 6).toUpperCase() || 'XXXXXX'}</Text>
+                  <TouchableOpacity style={styles.copyButton} onPress={handleCopyReferral}>
+                    <Copy color="#FBBF24" size={16} />
+                  </TouchableOpacity>
+                </View>
+              </View>
+              <View style={styles.referralStats}>
+                <View style={styles.referralStatItem}>
+                  <Text style={styles.referralStatValue}>0</Text>
+                  <Text style={styles.referralStatLabel}>Invites</Text>
+                </View>
+                <View style={styles.referralStatItem}>
+                  <Text style={styles.referralStatValue}>0</Text>
+                  <Text style={styles.referralStatLabel}>$HERO Earned</Text>
+                </View>
+              </View>
+            </View>
           </View>
 
+          {/* Notifications */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Notifications</Text>
+            <View style={styles.notificationCard}>
+              <View style={styles.notificationItem}>
+                <View style={styles.notificationLeft}>
+                  <View style={[styles.notificationIcon, { backgroundColor: 'rgba(251, 191, 36, 0.15)' }]}>
+                    <Bell color="#FBBF24" size={18} />
+                  </View>
+                  <View>
+                    <Text style={styles.notificationTitle}>Push Notifications</Text>
+                    <Text style={styles.notificationDesc}>Earnings, events & updates</Text>
+                  </View>
+                </View>
+                <Switch
+                  value={pushNotifications}
+                  onValueChange={setPushNotifications}
+                  trackColor={{ false: '#334155', true: 'rgba(251, 191, 36, 0.5)' }}
+                  thumbColor={pushNotifications ? '#FBBF24' : '#64748B'}
+                />
+              </View>
+              <View style={styles.notificationDivider} />
+              <View style={styles.notificationItem}>
+                <View style={styles.notificationLeft}>
+                  <View style={[styles.notificationIcon, { backgroundColor: 'rgba(59, 130, 246, 0.15)' }]}>
+                    <Mail color="#3B82F6" size={18} />
+                  </View>
+                  <View>
+                    <Text style={styles.notificationTitle}>Email Notifications</Text>
+                    <Text style={styles.notificationDesc}>Weekly reports & news</Text>
+                  </View>
+                </View>
+                <Switch
+                  value={emailNotifications}
+                  onValueChange={setEmailNotifications}
+                  trackColor={{ false: '#334155', true: 'rgba(59, 130, 246, 0.5)' }}
+                  thumbColor={emailNotifications ? '#3B82F6' : '#64748B'}
+                />
+              </View>
+            </View>
+          </View>
+
+          {/* General Settings */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>General</Text>
+            <View style={styles.menuSection}>
+              {generalMenuItems.map((item, index) => (
+                <TouchableOpacity
+                  key={index}
+                  style={[styles.menuItem, index === generalMenuItems.length - 1 && styles.menuItemLast]}
+                  onPress={item.onPress}
+                >
+                  <View style={[styles.menuIconContainer, { backgroundColor: `${item.color}15` }]}>
+                    <item.icon color={item.color} size={18} />
+                  </View>
+                  <View style={styles.menuContent}>
+                    <Text style={styles.menuTitle}>{item.title}</Text>
+                    <Text style={styles.menuDescription}>{item.description}</Text>
+                  </View>
+                  <ChevronRight color="#64748B" size={18} />
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+
+          {/* Web3 Settings */}
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Web3</Text>
+              <View style={styles.comingSoonBadge}>
+                <Text style={styles.comingSoonText}>Beta</Text>
+              </View>
+            </View>
+            <View style={styles.menuSection}>
+              {web3MenuItems.map((item, index) => (
+                <TouchableOpacity
+                  key={index}
+                  style={[styles.menuItem, index === web3MenuItems.length - 1 && styles.menuItemLast]}
+                  onPress={item.onPress}
+                >
+                  <View style={[styles.menuIconContainer, { backgroundColor: `${item.color}15` }]}>
+                    <item.icon color={item.color} size={18} />
+                  </View>
+                  <View style={styles.menuContent}>
+                    <Text style={styles.menuTitle}>{item.title}</Text>
+                    <Text style={styles.menuDescription}>{item.description}</Text>
+                  </View>
+                  {item.badge && (
+                    <View style={styles.newBadge}>
+                      <Text style={styles.newBadgeText}>{item.badge}</Text>
+                    </View>
+                  )}
+                  <ChevronRight color="#64748B" size={18} />
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+
+          {/* Support */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Support</Text>
+            <View style={styles.menuSection}>
+              {supportMenuItems.map((item, index) => (
+                <TouchableOpacity
+                  key={index}
+                  style={[styles.menuItem, index === supportMenuItems.length - 1 && styles.menuItemLast]}
+                  onPress={item.onPress}
+                >
+                  <View style={[styles.menuIconContainer, { backgroundColor: `${item.color}15` }]}>
+                    <item.icon color={item.color} size={18} />
+                  </View>
+                  <View style={styles.menuContent}>
+                    <Text style={styles.menuTitle}>{item.title}</Text>
+                    <Text style={styles.menuDescription}>{item.description}</Text>
+                  </View>
+                  <ChevronRight color="#64748B" size={18} />
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+
+          {/* Social Links */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Follow Us</Text>
+            <View style={styles.socialGrid}>
+              <TouchableOpacity style={styles.socialButton}>
+                <Twitter color="#1DA1F2" size={20} />
+                <Text style={styles.socialText}>Twitter</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.socialButton}>
+                <MessageCircle color="#5865F2" size={20} />
+                <Text style={styles.socialText}>Discord</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.socialButton}>
+                <Globe color="#FFFFFF" size={20} />
+                <Text style={styles.socialText}>Website</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          {/* Sign Out */}
           <TouchableOpacity style={styles.signOutButton} onPress={handleSignOut}>
-            <LogOut color="#EF4444" size={20} />
+            <LogOut color="#EF4444" size={18} />
             <Text style={styles.signOutText}>Sign Out</Text>
           </TouchableOpacity>
 
+          {/* Version */}
           <View style={styles.versionContainer}>
             <Text style={styles.versionText}>HeroVerse v1.0.0</Text>
+            <Text style={styles.copyrightText}>© 2026 HeroVerse. All rights reserved.</Text>
           </View>
 
           <View style={styles.bottomSpacer} />
@@ -142,119 +422,379 @@ const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
   },
-  header: {
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: '800',
-    color: '#FFFFFF',
-  },
   scrollView: {
     flex: 1,
-    paddingHorizontal: 20,
+    paddingHorizontal: 16,
+    paddingTop: 12,
   },
+  // Profile Card
   profileCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
     backgroundColor: 'rgba(30, 41, 59, 0.8)',
-    borderRadius: 16,
-    padding: 20,
-    marginBottom: 24,
+    borderRadius: 14,
+    padding: 14,
+    marginBottom: 14,
     borderWidth: 1,
     borderColor: 'rgba(100, 116, 139, 0.2)',
-    marginTop: 13
+  },
+  profileHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 14,
   },
   profileAvatar: {
-    width: 64,
-    height: 64,
-    borderRadius: 20,
+    width: 52,
+    height: 52,
+    borderRadius: 14,
     backgroundColor: 'rgba(251, 191, 36, 0.15)',
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 16,
+    marginRight: 12,
   },
   profileInfo: {
     flex: 1,
   },
   profileName: {
-    fontSize: 20,
+    fontSize: 16,
     fontWeight: '700',
     color: '#FFFFFF',
-    marginBottom: 6,
+    marginBottom: 4,
   },
   profileEmail: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 4,
   },
   profileEmailText: {
-    fontSize: 14,
+    fontSize: 11,
     color: '#94A3B8',
   },
-  menuSection: {
-    backgroundColor: 'rgba(30, 41, 59, 0.5)',
-    borderRadius: 16,
+  editButton: {
+    backgroundColor: 'rgba(251, 191, 36, 0.15)',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+  },
+  editButtonText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#FBBF24',
+  },
+  profileStats: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    backgroundColor: 'rgba(15, 23, 42, 0.5)',
+    borderRadius: 10,
+    padding: 12,
+  },
+  profileStatItem: {
+    alignItems: 'center',
+    gap: 4,
+  },
+  profileStatValue: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  profileStatLabel: {
+    fontSize: 9,
+    color: '#94A3B8',
+  },
+  profileStatDivider: {
+    width: 1,
+    backgroundColor: 'rgba(100, 116, 139, 0.3)',
+  },
+  // Wallet Banner
+  walletBanner: {
+    borderRadius: 12,
     overflow: 'hidden',
-    marginBottom: 24,
+    marginBottom: 18,
+  },
+  walletBannerGradient: {
+    padding: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(139, 92, 246, 0.3)',
+    borderRadius: 12,
+  },
+  walletBannerIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 10,
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  walletBannerText: {
+    flex: 1,
+  },
+  walletBannerTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    marginBottom: 2,
+  },
+  walletBannerDesc: {
+    fontSize: 10,
+    color: 'rgba(255, 255, 255, 0.7)',
+  },
+  // Sections
+  section: {
+    marginBottom: 18,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  sectionTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    marginBottom: 10,
+  },
+  comingSoonBadge: {
+    backgroundColor: 'rgba(139, 92, 246, 0.2)',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+    marginBottom: 10,
+  },
+  comingSoonText: {
+    fontSize: 9,
+    fontWeight: '600',
+    color: '#8B5CF6',
+  },
+  // Referral Card
+  referralCard: {
+    backgroundColor: 'rgba(30, 41, 59, 0.6)',
+    borderRadius: 12,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: 'rgba(100, 116, 139, 0.2)',
+  },
+  referralHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 14,
+  },
+  referralIconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 10,
+    backgroundColor: 'rgba(251, 191, 36, 0.15)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  referralInfo: {
+    flex: 1,
+  },
+  referralTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  referralDesc: {
+    fontSize: 10,
+    color: '#94A3B8',
+  },
+  referralCodeContainer: {
+    marginBottom: 12,
+  },
+  referralCodeLabel: {
+    fontSize: 10,
+    color: '#94A3B8',
+    marginBottom: 6,
+  },
+  referralCodeBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(15, 23, 42, 0.5)',
+    borderRadius: 8,
+    padding: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(251, 191, 36, 0.3)',
+    borderStyle: 'dashed',
+  },
+  referralCode: {
+    flex: 1,
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#FBBF24',
+    letterSpacing: 2,
+  },
+  copyButton: {
+    padding: 4,
+  },
+  referralStats: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  referralStatItem: {
+    flex: 1,
+    backgroundColor: 'rgba(15, 23, 42, 0.5)',
+    borderRadius: 8,
+    padding: 10,
+    alignItems: 'center',
+  },
+  referralStatValue: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  referralStatLabel: {
+    fontSize: 9,
+    color: '#94A3B8',
+  },
+  // Notifications
+  notificationCard: {
+    backgroundColor: 'rgba(30, 41, 59, 0.6)',
+    borderRadius: 12,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: 'rgba(100, 116, 139, 0.2)',
+  },
+  notificationItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 12,
+  },
+  notificationLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  notificationIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  notificationTitle: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
+  notificationDesc: {
+    fontSize: 10,
+    color: '#94A3B8',
+  },
+  notificationDivider: {
+    height: 1,
+    backgroundColor: 'rgba(100, 116, 139, 0.15)',
+    marginHorizontal: 12,
+  },
+  // Menu Section
+  menuSection: {
+    backgroundColor: 'rgba(30, 41, 59, 0.6)',
+    borderRadius: 12,
+    overflow: 'hidden',
     borderWidth: 1,
     borderColor: 'rgba(100, 116, 139, 0.2)',
   },
   menuItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 16,
+    padding: 12,
     borderBottomWidth: 1,
     borderBottomColor: 'rgba(100, 116, 139, 0.1)',
   },
+  menuItemLast: {
+    borderBottomWidth: 0,
+  },
   menuIconContainer: {
-    width: 44,
-    height: 44,
-    borderRadius: 12,
-    backgroundColor: 'rgba(251, 191, 36, 0.1)',
+    width: 36,
+    height: 36,
+    borderRadius: 10,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 14,
+    marginRight: 12,
   },
   menuContent: {
     flex: 1,
   },
   menuTitle: {
-    fontSize: 16,
+    fontSize: 13,
     fontWeight: '600',
     color: '#FFFFFF',
     marginBottom: 2,
   },
   menuDescription: {
-    fontSize: 12,
+    fontSize: 10,
     color: '#94A3B8',
   },
+  newBadge: {
+    backgroundColor: 'rgba(34, 197, 94, 0.2)',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+    marginRight: 8,
+  },
+  newBadgeText: {
+    fontSize: 9,
+    fontWeight: '600',
+    color: '#22C55E',
+  },
+  // Social Grid
+  socialGrid: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  socialButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    backgroundColor: 'rgba(30, 41, 59, 0.6)',
+    borderRadius: 10,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(100, 116, 139, 0.2)',
+  },
+  socialText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
+  // Sign Out
   signOutButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 10,
+    gap: 8,
     backgroundColor: 'rgba(239, 68, 68, 0.1)',
-    borderRadius: 12,
-    padding: 16,
+    borderRadius: 10,
+    padding: 14,
     borderWidth: 1,
     borderColor: 'rgba(239, 68, 68, 0.2)',
+    marginBottom: 16,
   },
   signOutText: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '600',
     color: '#EF4444',
   },
+  // Version
   versionContainer: {
     alignItems: 'center',
-    marginTop: 32,
+    marginBottom: 8,
   },
   versionText: {
-    fontSize: 12,
+    fontSize: 11,
     color: '#64748B',
+    marginBottom: 4,
+  },
+  copyrightText: {
+    fontSize: 9,
+    color: '#475569',
   },
   bottomSpacer: {
-    height: 20,
+    height: 24,
   },
 });
