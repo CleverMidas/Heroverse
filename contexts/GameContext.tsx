@@ -16,6 +16,7 @@ interface GameContextType {
   collectSupercash: () => Promise<number>;
   refreshHeroes: () => Promise<void>;
   calculatePending: () => void;
+  purchaseHero: (heroId: string, price: number) => Promise<{ success: boolean; error?: string }>;
 }
 
 const GameContext = createContext<GameContextType>({
@@ -31,6 +32,7 @@ const GameContext = createContext<GameContextType>({
   collectSupercash: async () => 0,
   refreshHeroes: async () => {},
   calculatePending: () => {},
+  purchaseHero: async () => ({ success: false }),
 });
 
 export function GameProvider({ children }: { children: ReactNode }) {
@@ -229,6 +231,46 @@ export function GameProvider({ children }: { children: ReactNode }) {
     await fetchUserHeroes();
   };
 
+  const purchaseHero = async (heroId: string, price: number): Promise<{ success: boolean; error?: string }> => {
+    if (!user || !profile) return { success: false, error: 'User not found' };
+
+    if (profile.supercash_balance < price) {
+      return { success: false, error: 'Insufficient SuperCash balance' };
+    }
+
+    try {
+      setError(null);
+
+      const { error: insertError } = await supabase
+        .from('user_heroes')
+        .insert({
+          user_id: user.id,
+          hero_id: heroId,
+          is_active: false,
+          is_revealed: true,
+        });
+
+      if (insertError) {
+        return { success: false, error: insertError.message };
+      }
+
+      const { error: updateError } = await supabase
+        .from('profiles')
+        .update({ supercash_balance: profile.supercash_balance - price })
+        .eq('id', user.id);
+
+      if (updateError) {
+        return { success: false, error: updateError.message };
+      }
+
+      await refreshProfile();
+      await fetchUserHeroes();
+      return { success: true };
+    } catch (err) {
+      return { success: false, error: 'Failed to purchase hero' };
+    }
+  };
+
   return (
     <GameContext.Provider value={{
       userHeroes,
@@ -243,6 +285,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
       collectSupercash,
       refreshHeroes,
       calculatePending,
+      purchaseHero,
     }}>
       {children}
     </GameContext.Provider>

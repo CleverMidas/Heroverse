@@ -25,12 +25,14 @@ type FilterTab = 'all' | 'active' | 'inactive' | 'nft';
 
 export default function HeroesScreen() {
   const { profile } = useAuth();
-  const { userHeroes, allHeroes, claimFreeHero, activateHero, revealHero, loading, error } = useGame();
+  const { userHeroes, allHeroes, claimFreeHero, activateHero, revealHero, purchaseHero, loading, error } = useGame();
   const [claiming, setClaiming] = useState(false);
   const [activating, setActivating] = useState<string | null>(null);
   const [revealing, setRevealing] = useState<string | null>(null);
   const [selectedHero, setSelectedHero] = useState<UserHeroWithDetails | null>(null);
   const [showClaimModal, setShowClaimModal] = useState(false);
+  const [showMarketplace, setShowMarketplace] = useState(false);
+  const [purchasing, setPurchasing] = useState<string | null>(null);
   const [activeFilter, setActiveFilter] = useState<FilterTab>('all');
 
   const starterHero = allHeroes.find(h => h.is_starter);
@@ -74,6 +76,21 @@ export default function HeroesScreen() {
       if (updated) setSelectedHero(updated);
     }
   };
+
+  const getHeroPrice = (rarity: { tier: number; supercash_per_hour: number }): number => {
+    return rarity.supercash_per_hour * 100;
+  };
+
+  const handlePurchaseHero = async (heroId: string, price: number) => {
+    setPurchasing(heroId);
+    const result = await purchaseHero(heroId, price);
+    setPurchasing(null);
+    if (!result.success && result.error) {
+      alert(result.error);
+    }
+  };
+
+  const marketplaceHeroes = allHeroes.filter(h => !h.is_starter);
 
   const formatTimeActive = (activatedAt: string): string => {
     const activated = new Date(activatedAt);
@@ -315,7 +332,7 @@ export default function HeroesScreen() {
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Hero Actions</Text>
             <View style={styles.actionGrid}>
-              <TouchableOpacity style={styles.actionCard}>
+              <TouchableOpacity style={styles.actionCard} onPress={() => setShowMarketplace(true)}>
                 <LinearGradient
                   colors={['rgba(251, 191, 36, 0.2)', 'rgba(251, 191, 36, 0.05)']}
                   style={styles.actionCardGradient}
@@ -325,8 +342,8 @@ export default function HeroesScreen() {
                   </View>
                   <Text style={styles.actionCardTitle}>Marketplace</Text>
                   <Text style={styles.actionCardDesc}>Buy & Sell Heroes</Text>
-                  <View style={styles.actionCardBadge}>
-                    <Text style={styles.actionCardBadgeText}>Soon</Text>
+                  <View style={[styles.actionCardBadge, { backgroundColor: 'rgba(34, 197, 94, 0.2)' }]}>
+                    <Text style={[styles.actionCardBadgeText, { color: '#22C55E' }]}>Open</Text>
                   </View>
                 </LinearGradient>
               </TouchableOpacity>
@@ -584,6 +601,129 @@ export default function HeroesScreen() {
               >
                 <Text style={styles.claimSuccessButtonText}>Awesome!</Text>
               </TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
+
+        {/* Marketplace Modal */}
+        <Modal
+          visible={showMarketplace}
+          transparent
+          animationType="slide"
+          onRequestClose={() => setShowMarketplace(false)}
+        >
+          <View style={styles.marketplaceOverlay}>
+            <View style={styles.marketplaceModal}>
+              <View style={styles.marketplaceHeader}>
+                <View style={styles.marketplaceTitleRow}>
+                  <View style={styles.marketplaceTitleIcon}>
+                    <ShoppingCart color="#FBBF24" size={24} />
+                  </View>
+                  <View>
+                    <Text style={styles.marketplaceTitle}>Marketplace</Text>
+                    <Text style={styles.marketplaceSubtitle}>Buy heroes with SuperCash</Text>
+                  </View>
+                </View>
+                <TouchableOpacity
+                  style={styles.marketplaceClose}
+                  onPress={() => setShowMarketplace(false)}
+                >
+                  <X color="#94A3B8" size={24} />
+                </TouchableOpacity>
+              </View>
+
+              <View style={styles.marketplaceBalance}>
+                <Coins color="#FBBF24" size={18} />
+                <Text style={styles.marketplaceBalanceText}>
+                  Your Balance: {profile?.supercash_balance?.toLocaleString() || 0} SC
+                </Text>
+              </View>
+
+              <ScrollView style={styles.marketplaceList} showsVerticalScrollIndicator={false}>
+                {marketplaceHeroes.map(hero => {
+                  const price = getHeroPrice(hero.hero_rarities);
+                  const canAfford = (profile?.supercash_balance || 0) >= price;
+                  const owned = userHeroes.some(uh => uh.hero_id === hero.id);
+                  const isPurchasing = purchasing === hero.id;
+
+                  return (
+                    <View
+                      key={hero.id}
+                      style={[
+                        styles.marketplaceItem,
+                        { borderColor: hero.hero_rarities.color_hex + '40' },
+                      ]}
+                    >
+                      <Image
+                        source={getHeroImageSource(hero.image_url)}
+                        style={styles.marketplaceHeroImage}
+                      />
+                      <View style={styles.marketplaceHeroInfo}>
+                        <Text style={styles.marketplaceHeroName}>{hero.name}</Text>
+                        <View
+                          style={[
+                            styles.marketplaceRarityBadge,
+                            { backgroundColor: hero.hero_rarities.color_hex + '20' },
+                          ]}
+                        >
+                          <Text
+                            style={[
+                              styles.marketplaceRarityText,
+                              { color: hero.hero_rarities.color_hex },
+                            ]}
+                          >
+                            {hero.hero_rarities.name}
+                          </Text>
+                        </View>
+                        <View style={styles.marketplaceHeroStats}>
+                          <Coins color="#FBBF24" size={12} />
+                          <Text style={styles.marketplaceHeroEarn}>
+                            {hero.hero_rarities.supercash_per_hour}/hr
+                          </Text>
+                        </View>
+                      </View>
+                      <View style={styles.marketplacePriceSection}>
+                        <Text style={styles.marketplacePrice}>{price.toLocaleString()} SC</Text>
+                        {owned ? (
+                          <View style={styles.marketplaceOwnedBadge}>
+                            <Check color="#22C55E" size={14} />
+                            <Text style={styles.marketplaceOwnedText}>Owned</Text>
+                          </View>
+                        ) : (
+                          <TouchableOpacity
+                            style={[
+                              styles.marketplaceBuyButton,
+                              !canAfford && styles.marketplaceBuyButtonDisabled,
+                            ]}
+                            onPress={() => handlePurchaseHero(hero.id, price)}
+                            disabled={!canAfford || isPurchasing}
+                          >
+                            {isPurchasing ? (
+                              <ActivityIndicator size="small" color="#0F172A" />
+                            ) : (
+                              <Text
+                                style={[
+                                  styles.marketplaceBuyButtonText,
+                                  !canAfford && styles.marketplaceBuyButtonTextDisabled,
+                                ]}
+                              >
+                                {canAfford ? 'Buy' : 'Not enough'}
+                              </Text>
+                            )}
+                          </TouchableOpacity>
+                        )}
+                      </View>
+                    </View>
+                  );
+                })}
+
+                {marketplaceHeroes.length === 0 && (
+                  <View style={styles.marketplaceEmpty}>
+                    <ShoppingCart color="#64748B" size={48} />
+                    <Text style={styles.marketplaceEmptyText}>No heroes available</Text>
+                  </View>
+                )}
+              </ScrollView>
             </View>
           </View>
         </Modal>
@@ -1205,5 +1345,172 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '700',
     color: '#0F172A',
+  },
+  // Marketplace Modal
+  marketplaceOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.9)',
+    justifyContent: 'flex-end',
+  },
+  marketplaceModal: {
+    backgroundColor: '#1E293B',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    maxHeight: height * 0.85,
+    paddingBottom: 24,
+  },
+  marketplaceHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    padding: 20,
+    paddingBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(100, 116, 139, 0.2)',
+  },
+  marketplaceTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  marketplaceTitleIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    backgroundColor: 'rgba(251, 191, 36, 0.15)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  marketplaceTitle: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: '#FFFFFF',
+  },
+  marketplaceSubtitle: {
+    fontSize: 12,
+    color: '#94A3B8',
+    marginTop: 2,
+  },
+  marketplaceClose: {
+    padding: 4,
+  },
+  marketplaceBalance: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: 'rgba(251, 191, 36, 0.1)',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    marginHorizontal: 20,
+    marginTop: 12,
+    marginBottom: 8,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(251, 191, 36, 0.2)',
+  },
+  marketplaceBalanceText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#FBBF24',
+  },
+  marketplaceList: {
+    paddingHorizontal: 20,
+    paddingTop: 8,
+  },
+  marketplaceItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(30, 41, 59, 0.8)',
+    borderRadius: 14,
+    padding: 12,
+    marginBottom: 10,
+    borderWidth: 1,
+  },
+  marketplaceHeroImage: {
+    width: 64,
+    height: 64,
+    borderRadius: 10,
+  },
+  marketplaceHeroInfo: {
+    flex: 1,
+    marginLeft: 12,
+  },
+  marketplaceHeroName: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    marginBottom: 4,
+  },
+  marketplaceRarityBadge: {
+    alignSelf: 'flex-start',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+    marginBottom: 6,
+  },
+  marketplaceRarityText: {
+    fontSize: 10,
+    fontWeight: '700',
+  },
+  marketplaceHeroStats: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  marketplaceHeroEarn: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#FBBF24',
+  },
+  marketplacePriceSection: {
+    alignItems: 'flex-end',
+    gap: 6,
+  },
+  marketplacePrice: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  marketplaceBuyButton: {
+    backgroundColor: '#FBBF24',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 8,
+    minWidth: 80,
+    alignItems: 'center',
+  },
+  marketplaceBuyButtonDisabled: {
+    backgroundColor: 'rgba(100, 116, 139, 0.3)',
+  },
+  marketplaceBuyButtonText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#0F172A',
+  },
+  marketplaceBuyButtonTextDisabled: {
+    color: '#64748B',
+  },
+  marketplaceOwnedBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: 'rgba(34, 197, 94, 0.15)',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
+  },
+  marketplaceOwnedText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#22C55E',
+  },
+  marketplaceEmpty: {
+    alignItems: 'center',
+    paddingVertical: 40,
+  },
+  marketplaceEmptyText: {
+    fontSize: 14,
+    color: '#64748B',
+    marginTop: 12,
   },
 });
