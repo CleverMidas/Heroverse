@@ -12,6 +12,7 @@ interface GameContextType {
   error: string | null;
   claimFreeHero: () => Promise<boolean>;
   activateHero: (userHeroId: string) => Promise<boolean>;
+  deactivateHero: (userHeroId: string) => Promise<boolean>;
   revealHero: (userHeroId: string) => Promise<boolean>;
   collectSupercash: () => Promise<number>;
   refreshHeroes: () => Promise<void>;
@@ -28,6 +29,7 @@ const GameContext = createContext<GameContextType>({
   error: null,
   claimFreeHero: async () => false,
   activateHero: async () => false,
+  deactivateHero: async () => false,
   revealHero: async () => false,
   collectSupercash: async () => 0,
   refreshHeroes: async () => {},
@@ -179,6 +181,34 @@ export function GameProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const deactivateHero = async (userHeroId: string): Promise<boolean> => {
+    if (!user) return false;
+
+    try {
+      setError(null);
+
+      const { error: updateError } = await supabase
+        .from('user_heroes')
+        .update({
+          is_active: false,
+          activated_at: null,
+        })
+        .eq('id', userHeroId)
+        .eq('user_id', user.id);
+
+      if (updateError) {
+        setError(updateError.message);
+        return false;
+      }
+
+      await fetchUserHeroes();
+      return true;
+    } catch (err) {
+      setError('Failed to deactivate hero');
+      return false;
+    }
+  };
+
   const revealHero = async (userHeroId: string): Promise<boolean> => {
     if (!user) return false;
 
@@ -281,6 +311,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
       error,
       claimFreeHero,
       activateHero,
+      deactivateHero,
       revealHero,
       collectSupercash,
       refreshHeroes,

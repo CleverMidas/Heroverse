@@ -25,9 +25,10 @@ type FilterTab = 'all' | 'active' | 'inactive' | 'nft';
 
 export default function HeroesScreen() {
   const { profile } = useAuth();
-  const { userHeroes, allHeroes, claimFreeHero, activateHero, revealHero, purchaseHero, loading, error } = useGame();
+  const { userHeroes, allHeroes, claimFreeHero, activateHero, deactivateHero, revealHero, purchaseHero, loading, error } = useGame();
   const [claiming, setClaiming] = useState(false);
   const [activating, setActivating] = useState<string | null>(null);
+  const [deactivating, setDeactivating] = useState<string | null>(null);
   const [revealing, setRevealing] = useState<string | null>(null);
   const [selectedHero, setSelectedHero] = useState<UserHeroWithDetails | null>(null);
   const [showClaimModal, setShowClaimModal] = useState(false);
@@ -64,6 +65,13 @@ export default function HeroesScreen() {
     setActivating(userHeroId);
     await activateHero(userHeroId);
     setActivating(null);
+    setSelectedHero(null);
+  };
+
+  const handleDeactivateHero = async (userHeroId: string) => {
+    setDeactivating(userHeroId);
+    await deactivateHero(userHeroId);
+    setDeactivating(null);
     setSelectedHero(null);
   };
 
@@ -510,10 +518,26 @@ export default function HeroesScreen() {
                     </View>
 
                     {selectedHero.is_active ? (
-                      <View style={styles.activeStatus}>
-                        <Check color="#22C55E" size={20} />
-                        <Text style={styles.activeStatusText}>Currently Active & Earning</Text>
-                      </View>
+                      <>
+                        <View style={styles.activeStatus}>
+                          <Check color="#22C55E" size={20} />
+                          <Text style={styles.activeStatusText}>Currently Active & Earning</Text>
+                        </View>
+                        <TouchableOpacity
+                          style={styles.deactivateButton}
+                          onPress={() => handleDeactivateHero(selectedHero.id)}
+                          disabled={deactivating === selectedHero.id}
+                        >
+                          {deactivating === selectedHero.id ? (
+                            <ActivityIndicator color="#EF4444" size="small" />
+                          ) : (
+                            <>
+                              <Zap color="#EF4444" size={16} />
+                              <Text style={styles.deactivateButtonText}>Set Inactive</Text>
+                            </>
+                          )}
+                        </TouchableOpacity>
+                      </>
                     ) : (
                       <TouchableOpacity
                         style={styles.activateButton}
@@ -1261,6 +1285,24 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '700',
     color: '#0F172A',
+  },
+  deactivateButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 10,
+    marginTop: 8,
+    backgroundColor: 'rgba(239, 68, 68, 0.1)',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(239, 68, 68, 0.3)',
+    width: '100%',
+  },
+  deactivateButtonText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#EF4444',
   },
   // Modal Web3 Actions
   modalWeb3Actions: {
