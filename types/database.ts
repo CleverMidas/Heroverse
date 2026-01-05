@@ -34,6 +34,7 @@ export interface Database {
           created_at?: string;
           updated_at?: string;
         };
+        Relationships: [];
       };
       hero_rarities: {
         Row: {
@@ -63,6 +64,7 @@ export interface Database {
           description?: string;
           created_at?: string;
         };
+        Relationships: [];
       };
       heroes: {
         Row: {
@@ -89,6 +91,15 @@ export interface Database {
           is_starter?: boolean;
           created_at?: string;
         };
+        Relationships: [
+          {
+            foreignKeyName: "heroes_rarity_id_fkey";
+            columns: ["rarity_id"];
+            isOneToOne: false;
+            referencedRelation: "hero_rarities";
+            referencedColumns: ["id"];
+          }
+        ];
       };
       user_heroes: {
         Row: {
@@ -121,7 +132,26 @@ export interface Database {
           last_collected_at?: string | null;
           acquired_at?: string;
         };
+        Relationships: [
+          {
+            foreignKeyName: "user_heroes_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "user_heroes_hero_id_fkey";
+            columns: ["hero_id"];
+            isOneToOne: false;
+            referencedRelation: "heroes";
+            referencedColumns: ["id"];
+          }
+        ];
       };
+    };
+    Views: {
+      [_ in never]: never;
     };
     Functions: {
       calculate_pending_supercash: {
@@ -132,6 +162,12 @@ export interface Database {
         Args: { p_user_id: string };
         Returns: number;
       };
+    };
+    Enums: {
+      [_ in never]: never;
+    };
+    CompositeTypes: {
+      [_ in never]: never;
     };
   };
 }
