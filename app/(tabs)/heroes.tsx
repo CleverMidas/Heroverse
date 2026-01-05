@@ -18,8 +18,10 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useAuth } from '@/contexts/AuthContext';
 import { useGame } from '@/contexts/GameContext';
 import { UserHeroWithDetails } from '@/types/database';
-import { Zap, Coins, Gift, X, Sparkles, Check, HelpCircle, Eye } from 'lucide-react-native';
+import { Zap, Coins, Gift, X, Sparkles, Check, HelpCircle, Eye, ShoppingCart, Layers, Flame, Star, Lock, ArrowUpRight, Swords, Shield, TrendingUp } from 'lucide-react-native';
 import { getHeroImageSource } from '@/lib/heroImages';
+
+type FilterTab = 'all' | 'active' | 'inactive' | 'nft';
 
 export default function HeroesScreen() {
   const { profile } = useAuth();
@@ -29,9 +31,23 @@ export default function HeroesScreen() {
   const [revealing, setRevealing] = useState<string | null>(null);
   const [selectedHero, setSelectedHero] = useState<UserHeroWithDetails | null>(null);
   const [showClaimModal, setShowClaimModal] = useState(false);
+  const [activeFilter, setActiveFilter] = useState<FilterTab>('all');
 
   const starterHero = allHeroes.find(h => h.is_starter);
   const canClaimFreeHero = !profile?.has_claimed_free_hero && starterHero;
+
+  const activeHeroes = userHeroes.filter(h => h.is_active);
+  const inactiveHeroes = userHeroes.filter(h => !h.is_active);
+  const totalPower = activeHeroes.reduce((sum, h) => sum + h.heroes.hero_rarities.supercash_per_hour * 10, 0);
+
+  const filteredHeroes = userHeroes.filter(hero => {
+    switch (activeFilter) {
+      case 'active': return hero.is_active;
+      case 'inactive': return !hero.is_active;
+      case 'nft': return false; // Future NFT heroes
+      default: return true;
+    }
+  });
 
   const handleClaimFreeHero = async () => {
     setClaiming(true);
@@ -103,6 +119,38 @@ export default function HeroesScreen() {
         )}
 
         <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+          {/* Collection Stats */}
+          <View style={styles.statsRow}>
+            <View style={styles.statCardMini}>
+              <View style={[styles.statIconMini, { backgroundColor: 'rgba(251, 191, 36, 0.15)' }]}>
+                <Layers color="#FBBF24" size={16} />
+              </View>
+              <Text style={styles.statValueMini}>{userHeroes.length}</Text>
+              <Text style={styles.statLabelMini}>Total</Text>
+            </View>
+            <View style={styles.statCardMini}>
+              <View style={[styles.statIconMini, { backgroundColor: 'rgba(34, 197, 94, 0.15)' }]}>
+                <Zap color="#22C55E" size={16} />
+              </View>
+              <Text style={styles.statValueMini}>{activeHeroes.length}</Text>
+              <Text style={styles.statLabelMini}>Active</Text>
+            </View>
+            <View style={styles.statCardMini}>
+              <View style={[styles.statIconMini, { backgroundColor: 'rgba(139, 92, 246, 0.15)' }]}>
+                <Flame color="#8B5CF6" size={16} />
+              </View>
+              <Text style={styles.statValueMini}>{totalPower}</Text>
+              <Text style={styles.statLabelMini}>Power</Text>
+            </View>
+            <View style={styles.statCardMini}>
+              <View style={[styles.statIconMini, { backgroundColor: 'rgba(59, 130, 246, 0.15)' }]}>
+                <Star color="#3B82F6" size={16} />
+              </View>
+              <Text style={styles.statValueMini}>0</Text>
+              <Text style={styles.statLabelMini}>NFTs</Text>
+            </View>
+          </View>
+
           {canClaimFreeHero && (
             <TouchableOpacity
               style={styles.claimCard}
@@ -117,12 +165,12 @@ export default function HeroesScreen() {
               >
                 <View style={styles.claimContent}>
                   <View style={styles.claimIconContainer}>
-                    <Gift color="#FFFFFF" size={32} />
+                    <Gift color="#FFFFFF" size={28} />
                   </View>
                   <View style={styles.claimTextContainer}>
                     <Text style={styles.claimTitle}>Claim Your Free Hero!</Text>
                     <Text style={styles.claimDescription}>
-                      Get your first hero and start earning SuperCash
+                      Start earning SuperCash now
                     </Text>
                   </View>
                   <View style={styles.claimButton}>
@@ -137,19 +185,60 @@ export default function HeroesScreen() {
             </TouchableOpacity>
           )}
 
-          {userHeroes.length === 0 && !canClaimFreeHero ? (
+          {/* Filter Tabs */}
+          <View style={styles.filterTabs}>
+            <TouchableOpacity 
+              style={[styles.filterTab, activeFilter === 'all' && styles.filterTabActive]}
+              onPress={() => setActiveFilter('all')}
+            >
+              <Text style={[styles.filterTabText, activeFilter === 'all' && styles.filterTabTextActive]}>
+                All ({userHeroes.length})
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={[styles.filterTab, activeFilter === 'active' && styles.filterTabActive]}
+              onPress={() => setActiveFilter('active')}
+            >
+              <Text style={[styles.filterTabText, activeFilter === 'active' && styles.filterTabTextActive]}>
+                Active ({activeHeroes.length})
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={[styles.filterTab, activeFilter === 'inactive' && styles.filterTabActive]}
+              onPress={() => setActiveFilter('inactive')}
+            >
+              <Text style={[styles.filterTabText, activeFilter === 'inactive' && styles.filterTabTextActive]}>
+                Idle ({inactiveHeroes.length})
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={[styles.filterTab, activeFilter === 'nft' && styles.filterTabActive]}
+              onPress={() => setActiveFilter('nft')}
+            >
+              <Lock color={activeFilter === 'nft' ? '#FBBF24' : '#64748B'} size={12} />
+              <Text style={[styles.filterTabText, activeFilter === 'nft' && styles.filterTabTextActive]}>
+                NFT
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          {filteredHeroes.length === 0 && !canClaimFreeHero ? (
             <View style={styles.emptyState}>
               <View style={styles.emptyIcon}>
-                <Zap color="#64748B" size={48} />
+                <Zap color="#64748B" size={40} />
               </View>
-              <Text style={styles.emptyTitle}>No Heroes Yet</Text>
+              <Text style={styles.emptyTitle}>
+                {activeFilter === 'nft' ? 'No NFT Heroes Yet' : 'No Heroes Found'}
+              </Text>
               <Text style={styles.emptyText}>
-                You haven't acquired any heroes yet. Keep an eye out for opportunities to add heroes to your collection!
+                {activeFilter === 'nft' 
+                  ? 'NFT heroes will be available when you mint or purchase from the marketplace'
+                  : 'Try changing the filter or acquire more heroes!'}
               </Text>
             </View>
           ) : (
             <View style={styles.heroesGrid}>
-              {userHeroes.map(userHero => (
+              {filteredHeroes.map(userHero => (
                 <TouchableOpacity
                   key={userHero.id}
                   style={[
@@ -166,13 +255,13 @@ export default function HeroesScreen() {
                 >
                   {userHero.is_active && userHero.is_revealed && (
                     <View style={styles.activeBadge}>
-                      <Sparkles color="#FFFFFF" size={12} />
+                      <Sparkles color="#FFFFFF" size={10} />
                       <Text style={styles.activeBadgeText}>ACTIVE</Text>
                     </View>
                   )}
                   {!userHero.is_revealed && (
                     <View style={styles.mysteryBadge}>
-                      <HelpCircle color="#FBBF24" size={12} />
+                      <HelpCircle color="#FBBF24" size={10} />
                       <Text style={styles.mysteryBadgeText}>MYSTERY</Text>
                     </View>
                   )}
@@ -183,7 +272,7 @@ export default function HeroesScreen() {
                     />
                   ) : (
                     <View style={styles.mysteryImageContainer}>
-                      <HelpCircle color="#FBBF24" size={48} />
+                      <HelpCircle color="#FBBF24" size={36} />
                       <Text style={styles.mysteryImageText}>Tap to Reveal</Text>
                     </View>
                   )}
@@ -211,7 +300,7 @@ export default function HeroesScreen() {
                       </Text>
                     </View>
                     <View style={styles.heroStats}>
-                      <Coins color="#FBBF24" size={14} />
+                      <Coins color="#FBBF24" size={12} />
                       <Text style={styles.heroStatsText}>
                         {userHero.is_revealed ? `${userHero.heroes.hero_rarities.supercash_per_hour}/hr` : '???'}
                       </Text>
@@ -221,6 +310,99 @@ export default function HeroesScreen() {
               ))}
             </View>
           )}
+
+          {/* Quick Actions */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Hero Actions</Text>
+            <View style={styles.actionGrid}>
+              <TouchableOpacity style={styles.actionCard}>
+                <LinearGradient
+                  colors={['rgba(251, 191, 36, 0.2)', 'rgba(251, 191, 36, 0.05)']}
+                  style={styles.actionCardGradient}
+                >
+                  <View style={styles.actionCardIcon}>
+                    <ShoppingCart color="#FBBF24" size={22} />
+                  </View>
+                  <Text style={styles.actionCardTitle}>Marketplace</Text>
+                  <Text style={styles.actionCardDesc}>Buy & Sell Heroes</Text>
+                  <View style={styles.actionCardBadge}>
+                    <Text style={styles.actionCardBadgeText}>Soon</Text>
+                  </View>
+                </LinearGradient>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.actionCard}>
+                <LinearGradient
+                  colors={['rgba(139, 92, 246, 0.2)', 'rgba(139, 92, 246, 0.05)']}
+                  style={styles.actionCardGradient}
+                >
+                  <View style={styles.actionCardIcon}>
+                    <Layers color="#8B5CF6" size={22} />
+                  </View>
+                  <Text style={styles.actionCardTitle}>Fusion</Text>
+                  <Text style={styles.actionCardDesc}>Combine Heroes</Text>
+                  <View style={styles.actionCardBadge}>
+                    <Text style={styles.actionCardBadgeText}>Soon</Text>
+                  </View>
+                </LinearGradient>
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          {/* Hero Upgrade Section */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Enhance Your Heroes</Text>
+            <View style={styles.upgradeGrid}>
+              <TouchableOpacity style={styles.upgradeCard}>
+                <View style={[styles.upgradeIcon, { backgroundColor: 'rgba(34, 197, 94, 0.15)' }]}>
+                  <TrendingUp color="#22C55E" size={20} />
+                </View>
+                <View style={styles.upgradeInfo}>
+                  <Text style={styles.upgradeTitle}>Level Up</Text>
+                  <Text style={styles.upgradeDesc}>Increase earning rate</Text>
+                </View>
+                <Lock color="#64748B" size={16} />
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.upgradeCard}>
+                <View style={[styles.upgradeIcon, { backgroundColor: 'rgba(59, 130, 246, 0.15)' }]}>
+                  <Shield color="#3B82F6" size={20} />
+                </View>
+                <View style={styles.upgradeInfo}>
+                  <Text style={styles.upgradeTitle}>Equip Gear</Text>
+                  <Text style={styles.upgradeDesc}>Boost hero stats</Text>
+                </View>
+                <Lock color="#64748B" size={16} />
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.upgradeCard}>
+                <View style={[styles.upgradeIcon, { backgroundColor: 'rgba(239, 68, 68, 0.15)' }]}>
+                  <Swords color="#EF4444" size={20} />
+                </View>
+                <View style={styles.upgradeInfo}>
+                  <Text style={styles.upgradeTitle}>Battle Arena</Text>
+                  <Text style={styles.upgradeDesc}>PvP combat</Text>
+                </View>
+                <Lock color="#64748B" size={16} />
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          {/* Mint NFT Banner */}
+          <TouchableOpacity style={styles.mintBanner}>
+            <LinearGradient
+              colors={['rgba(139, 92, 246, 0.3)', 'rgba(59, 130, 246, 0.3)']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.mintBannerGradient}
+            >
+              <View style={styles.mintBannerIcon}>
+                <Sparkles color="#FFFFFF" size={24} />
+              </View>
+              <View style={styles.mintBannerText}>
+                <Text style={styles.mintBannerTitle}>Mint Hero NFT</Text>
+                <Text style={styles.mintBannerDesc}>Turn your hero into a tradeable NFT</Text>
+              </View>
+              <ArrowUpRight color="#FFFFFF" size={20} />
+            </LinearGradient>
+          </TouchableOpacity>
 
           <View style={styles.bottomSpacer} />
         </ScrollView>
@@ -290,7 +472,14 @@ export default function HeroesScreen() {
                         <Text style={styles.modalStatValue}>
                           {selectedHero.heroes.hero_rarities.supercash_per_hour}
                         </Text>
-                        <Text style={styles.modalStatLabel}>SuperCash/hr</Text>
+                        <Text style={styles.modalStatLabel}>SC/hr</Text>
+                      </View>
+                      <View style={styles.modalStatItem}>
+                        <Flame color="#8B5CF6" size={20} />
+                        <Text style={styles.modalStatValue}>
+                          {selectedHero.heroes.hero_rarities.supercash_per_hour * 10}
+                        </Text>
+                        <Text style={styles.modalStatLabel}>Power</Text>
                       </View>
                       {selectedHero.is_active && selectedHero.activated_at && (
                         <View style={styles.modalStatItem}>
@@ -298,7 +487,7 @@ export default function HeroesScreen() {
                           <Text style={styles.modalStatValue}>
                             {formatTimeActive(selectedHero.activated_at)}
                           </Text>
-                          <Text style={styles.modalStatLabel}>Time Active</Text>
+                          <Text style={styles.modalStatLabel}>Active</Text>
                         </View>
                       )}
                     </View>
@@ -329,6 +518,18 @@ export default function HeroesScreen() {
                         </LinearGradient>
                       </TouchableOpacity>
                     )}
+
+                    {/* Modal Web3 Actions */}
+                    <View style={styles.modalWeb3Actions}>
+                      <TouchableOpacity style={styles.modalWeb3Button}>
+                        <ArrowUpRight color="#8B5CF6" size={16} />
+                        <Text style={styles.modalWeb3ButtonText}>Mint NFT</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity style={styles.modalWeb3Button}>
+                        <ShoppingCart color="#3B82F6" size={16} />
+                        <Text style={styles.modalWeb3ButtonText}>List for Sale</Text>
+                      </TouchableOpacity>
+                    </View>
                   </>
                 ) : (
                   <>
@@ -415,38 +616,12 @@ const styles = StyleSheet.create({
     marginTop: 16,
     fontSize: 14,
   },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: '800',
-    color: '#FFFFFF',
-  },
-  heroCount: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    backgroundColor: 'rgba(251, 191, 36, 0.15)',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 20,
-  },
-  heroCountText: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#FBBF24',
-  },
   errorContainer: {
-    marginHorizontal: 20,
+    marginHorizontal: 16,
     backgroundColor: 'rgba(239, 68, 68, 0.15)',
     borderRadius: 12,
     padding: 12,
-    marginBottom: 16,
+    marginBottom: 12,
     borderWidth: 1,
     borderColor: 'rgba(239, 68, 68, 0.3)',
   },
@@ -457,217 +632,413 @@ const styles = StyleSheet.create({
   },
   scrollView: {
     flex: 1,
-    paddingHorizontal: 20,
-    paddingTop: 13
+    paddingHorizontal: 16,
+    paddingTop: 12,
   },
+  // Stats Row
+  statsRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 14,
+  },
+  statCardMini: {
+    flex: 1,
+    backgroundColor: 'rgba(30, 41, 59, 0.6)',
+    borderRadius: 12,
+    padding: 10,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(100, 116, 139, 0.2)',
+  },
+  statIconMini: {
+    width: 28,
+    height: 28,
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  statValueMini: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  statLabelMini: {
+    fontSize: 9,
+    color: '#94A3B8',
+  },
+  // Claim Card
   claimCard: {
-    borderRadius: 16,
+    borderRadius: 14,
     overflow: 'hidden',
-    marginBottom: 24,
+    marginBottom: 14,
   },
   claimGradient: {
-    padding: 20,
+    padding: 16,
   },
   claimContent: {
     flexDirection: 'row',
     alignItems: 'center',
   },
   claimIconContainer: {
-    width: 56,
-    height: 56,
-    borderRadius: 16,
+    width: 48,
+    height: 48,
+    borderRadius: 14,
     backgroundColor: 'rgba(255, 255, 255, 0.2)',
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 16,
+    marginRight: 12,
   },
   claimTextContainer: {
     flex: 1,
   },
   claimTitle: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '700',
     color: '#FFFFFF',
-    marginBottom: 4,
+    marginBottom: 2,
   },
   claimDescription: {
-    fontSize: 12,
+    fontSize: 11,
     color: 'rgba(255, 255, 255, 0.8)',
   },
   claimButton: {
     backgroundColor: '#FFFFFF',
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 10,
   },
   claimButtonText: {
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: '700',
     color: '#22C55E',
   },
+  // Filter Tabs
+  filterTabs: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 14,
+  },
+  filterTab: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
+    paddingVertical: 8,
+    paddingHorizontal: 8,
+    backgroundColor: 'rgba(30, 41, 59, 0.6)',
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(100, 116, 139, 0.2)',
+  },
+  filterTabActive: {
+    backgroundColor: 'rgba(251, 191, 36, 0.15)',
+    borderColor: '#FBBF24',
+  },
+  filterTabText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#64748B',
+  },
+  filterTabTextActive: {
+    color: '#FBBF24',
+  },
+  // Empty State
   emptyState: {
     backgroundColor: 'rgba(30, 41, 59, 0.5)',
-    borderRadius: 20,
-    padding: 40,
+    borderRadius: 16,
+    padding: 28,
     alignItems: 'center',
     borderWidth: 1,
     borderColor: 'rgba(100, 116, 139, 0.2)',
-    marginTop: 32,
   },
   emptyIcon: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
+    width: 64,
+    height: 64,
+    borderRadius: 32,
     backgroundColor: 'rgba(100, 116, 139, 0.1)',
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: 14,
   },
   emptyTitle: {
-    fontSize: 20,
+    fontSize: 16,
     fontWeight: '700',
     color: '#FFFFFF',
-    marginBottom: 8,
+    marginBottom: 6,
   },
   emptyText: {
-    fontSize: 14,
+    fontSize: 12,
     color: '#94A3B8',
     textAlign: 'center',
-    lineHeight: 22,
+    lineHeight: 18,
   },
+  // Heroes Grid
   heroesGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 12,
+    gap: 10,
+    marginBottom: 20,
   },
   heroCard: {
-    width: '48%',
+    width: (width - 42) / 2,
     backgroundColor: 'rgba(30, 41, 59, 0.8)',
-    borderRadius: 16,
+    borderRadius: 14,
     overflow: 'hidden',
     borderWidth: 2,
   },
   activeBadge: {
     position: 'absolute',
-    top: 8,
-    right: 8,
+    top: 6,
+    right: 6,
     zIndex: 10,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    gap: 3,
     backgroundColor: '#22C55E',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
+    paddingHorizontal: 6,
+    paddingVertical: 3,
+    borderRadius: 6,
   },
   activeBadgeText: {
-    fontSize: 10,
+    fontSize: 8,
     fontWeight: '700',
     color: '#FFFFFF',
   },
   mysteryBadge: {
     position: 'absolute',
-    top: 8,
-    right: 8,
+    top: 6,
+    right: 6,
     zIndex: 10,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    gap: 3,
     backgroundColor: 'rgba(251, 191, 36, 0.9)',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
+    paddingHorizontal: 6,
+    paddingVertical: 3,
+    borderRadius: 6,
   },
   mysteryBadgeText: {
-    fontSize: 10,
+    fontSize: 8,
     fontWeight: '700',
     color: '#0F172A',
   },
   heroImage: {
     width: '100%',
-    height: 140,
+    height: 120,
   },
   mysteryImageContainer: {
     width: '100%',
-    height: 140,
+    height: 120,
     backgroundColor: 'rgba(251, 191, 36, 0.1)',
     justifyContent: 'center',
     alignItems: 'center',
   },
   mysteryImageText: {
-    marginTop: 8,
-    fontSize: 12,
+    marginTop: 6,
+    fontSize: 10,
     fontWeight: '600',
     color: '#FBBF24',
   },
   heroInfo: {
-    padding: 12,
+    padding: 10,
   },
   heroName: {
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: '700',
     color: '#FFFFFF',
-    marginBottom: 8,
+    marginBottom: 6,
   },
   rarityBadge: {
     alignSelf: 'flex-start',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
-    marginBottom: 8,
+    paddingHorizontal: 6,
+    paddingVertical: 3,
+    borderRadius: 5,
+    marginBottom: 6,
   },
   rarityText: {
-    fontSize: 10,
+    fontSize: 9,
     fontWeight: '700',
   },
   heroStats: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    gap: 3,
   },
   heroStatsText: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '600',
     color: '#FBBF24',
   },
-  bottomSpacer: {
-    height: 20,
+  // Section
+  section: {
+    marginBottom: 18,
   },
+  sectionTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    marginBottom: 10,
+  },
+  // Action Grid
+  actionGrid: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  actionCard: {
+    flex: 1,
+    borderRadius: 12,
+    overflow: 'hidden',
+  },
+  actionCardGradient: {
+    padding: 14,
+    borderWidth: 1,
+    borderColor: 'rgba(100, 116, 139, 0.2)',
+    borderRadius: 12,
+    position: 'relative',
+  },
+  actionCardIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 10,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  actionCardTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    marginBottom: 2,
+  },
+  actionCardDesc: {
+    fontSize: 10,
+    color: '#94A3B8',
+  },
+  actionCardBadge: {
+    position: 'absolute',
+    top: 10,
+    right: 10,
+    backgroundColor: 'rgba(100, 116, 139, 0.3)',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  actionCardBadgeText: {
+    fontSize: 8,
+    fontWeight: '600',
+    color: '#94A3B8',
+  },
+  // Upgrade Grid
+  upgradeGrid: {
+    gap: 8,
+  },
+  upgradeCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(30, 41, 59, 0.6)',
+    borderRadius: 12,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(100, 116, 139, 0.2)',
+  },
+  upgradeIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  upgradeInfo: {
+    flex: 1,
+  },
+  upgradeTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  upgradeDesc: {
+    fontSize: 10,
+    color: '#94A3B8',
+  },
+  // Mint Banner
+  mintBanner: {
+    borderRadius: 14,
+    overflow: 'hidden',
+    marginBottom: 8,
+  },
+  mintBannerGradient: {
+    padding: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(139, 92, 246, 0.3)',
+    borderRadius: 14,
+  },
+  mintBannerIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 10,
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  mintBannerText: {
+    flex: 1,
+  },
+  mintBannerTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    marginBottom: 2,
+  },
+  mintBannerDesc: {
+    fontSize: 10,
+    color: 'rgba(255, 255, 255, 0.7)',
+  },
+  bottomSpacer: {
+    height: 24,
+  },
+  // Modal
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.8)',
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 24,
+    padding: 20,
   },
   modalContent: {
     backgroundColor: '#1E293B',
-    borderRadius: 24,
-    padding: 24,
+    borderRadius: 20,
+    padding: 20,
     width: '100%',
-    maxWidth: 360,
+    maxWidth: 340,
     alignItems: 'center',
     borderWidth: 1,
     borderColor: 'rgba(100, 116, 139, 0.3)',
   },
   modalClose: {
     position: 'absolute',
-    top: 16,
-    right: 16,
+    top: 12,
+    right: 12,
     zIndex: 10,
-    padding: 8,
+    padding: 6,
   },
   modalImage: {
-    width: 160,
-    height: 160,
-    borderRadius: 20,
-    marginBottom: 20,
+    width: 140,
+    height: 140,
+    borderRadius: 16,
+    marginBottom: 16,
   },
   modalMysteryImage: {
-    width: 160,
-    height: 160,
-    borderRadius: 20,
-    marginBottom: 20,
+    width: 140,
+    height: 140,
+    borderRadius: 16,
+    marginBottom: 16,
     backgroundColor: 'rgba(251, 191, 36, 0.1)',
     justifyContent: 'center',
     alignItems: 'center',
@@ -676,84 +1047,108 @@ const styles = StyleSheet.create({
     borderStyle: 'dashed',
   },
   modalHeroName: {
-    fontSize: 24,
+    fontSize: 20,
     fontWeight: '800',
     color: '#FFFFFF',
-    marginBottom: 12,
+    marginBottom: 10,
     textAlign: 'center',
   },
   modalRarityBadge: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-    marginBottom: 16,
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderRadius: 16,
+    marginBottom: 12,
   },
   modalRarityText: {
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: '700',
   },
   modalDescription: {
-    fontSize: 14,
+    fontSize: 12,
     color: '#94A3B8',
     textAlign: 'center',
-    lineHeight: 22,
-    marginBottom: 24,
+    lineHeight: 18,
+    marginBottom: 16,
   },
   modalStats: {
     flexDirection: 'row',
-    gap: 32,
-    marginBottom: 24,
+    gap: 24,
+    marginBottom: 16,
   },
   modalStatItem: {
     alignItems: 'center',
   },
   modalStatValue: {
-    fontSize: 24,
+    fontSize: 20,
     fontWeight: '700',
     color: '#FFFFFF',
-    marginTop: 8,
+    marginTop: 6,
   },
   modalStatLabel: {
-    fontSize: 12,
+    fontSize: 10,
     color: '#94A3B8',
-    marginTop: 4,
+    marginTop: 2,
   },
   activeStatus: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 6,
     backgroundColor: 'rgba(34, 197, 94, 0.15)',
-    paddingHorizontal: 20,
-    paddingVertical: 14,
-    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 10,
     width: '100%',
     justifyContent: 'center',
   },
   activeStatusText: {
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: '600',
     color: '#22C55E',
   },
   activateButton: {
     width: '100%',
-    borderRadius: 12,
+    borderRadius: 10,
     overflow: 'hidden',
   },
   activateGradient: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
-    paddingVertical: 16,
+    gap: 6,
+    paddingVertical: 14,
   },
   activateButtonText: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '700',
     color: '#0F172A',
   },
+  // Modal Web3 Actions
+  modalWeb3Actions: {
+    flexDirection: 'row',
+    gap: 10,
+    marginTop: 12,
+    width: '100%',
+  },
+  modalWeb3Button: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 10,
+    backgroundColor: 'rgba(100, 116, 139, 0.2)',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(100, 116, 139, 0.2)',
+  },
+  modalWeb3ButtonText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#94A3B8',
+  },
   revealButton: {
     width: '100%',
-    borderRadius: 12,
+    borderRadius: 10,
     overflow: 'hidden',
     marginTop: 8,
   },
@@ -761,53 +1156,53 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
-    paddingVertical: 16,
+    gap: 6,
+    paddingVertical: 14,
   },
   revealButtonText: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '700',
     color: '#0F172A',
   },
   claimSuccessModal: {
     backgroundColor: '#1E293B',
-    borderRadius: 24,
-    padding: 32,
+    borderRadius: 20,
+    padding: 28,
     alignItems: 'center',
-    maxWidth: 320,
+    maxWidth: 300,
     borderWidth: 1,
     borderColor: 'rgba(100, 116, 139, 0.3)',
   },
   claimSuccessIcon: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
+    width: 72,
+    height: 72,
+    borderRadius: 36,
     backgroundColor: 'rgba(251, 191, 36, 0.15)',
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: 16,
   },
   claimSuccessTitle: {
-    fontSize: 24,
+    fontSize: 20,
     fontWeight: '800',
     color: '#FFFFFF',
-    marginBottom: 12,
+    marginBottom: 10,
   },
   claimSuccessText: {
-    fontSize: 14,
+    fontSize: 12,
     color: '#94A3B8',
     textAlign: 'center',
-    lineHeight: 22,
-    marginBottom: 24,
+    lineHeight: 18,
+    marginBottom: 20,
   },
   claimSuccessButton: {
     backgroundColor: '#FBBF24',
-    paddingHorizontal: 32,
-    paddingVertical: 14,
-    borderRadius: 12,
+    paddingHorizontal: 28,
+    paddingVertical: 12,
+    borderRadius: 10,
   },
   claimSuccessButtonText: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '700',
     color: '#0F172A',
   },
