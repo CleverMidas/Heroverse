@@ -11,7 +11,7 @@ interface AuthContextType {
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
   updateProfile: (updates: Partial<Profile>) => Promise<boolean>;
-  changePassword: (currentPassword: string, newPassword: string) => Promise<{ success: boolean; error?: string }>;
+  changePassword: (newPassword: string) => Promise<boolean>;
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -22,7 +22,7 @@ const AuthContext = createContext<AuthContextType>({
   signOut: async () => {},
   refreshProfile: async () => {},
   updateProfile: async () => false,
-  changePassword: async () => ({ success: false }),
+  changePassword: async () => false,
 });
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -91,16 +91,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return true;
   };
 
-  const changePassword = async (currentPassword: string, newPassword: string): Promise<{ success: boolean; error?: string }> => {
-    if (!user?.email) return { success: false, error: 'User not found' };
-    const { error: signInError } = await supabase.auth.signInWithPassword({
-      email: user.email,
-      password: currentPassword,
-    });
-    if (signInError) return { success: false, error: 'Current password is incorrect' };
-    const { error: updateError } = await supabase.auth.updateUser({ password: newPassword });
-    if (updateError) return { success: false, error: 'Failed to update password' };
-    return { success: true };
+  const changePassword = async (newPassword: string): Promise<boolean> => {
+    if (!user) return false;
+    const { error } = await supabase.auth.updateUser({ password: newPassword });
+    return !error;
   };
 
   return (

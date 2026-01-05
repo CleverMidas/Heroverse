@@ -42,13 +42,11 @@ export default function SettingsScreen() {
   const [emailNotifications, setEmailNotifications] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [newUsername, setNewUsername] = useState(profile?.username || '');
-  const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [saving, setSaving] = useState(false);
   const [copied, setCopied] = useState(false);
-  const [passwordError, setPasswordError] = useState('');
 
   const activeHeroes = userHeroes.filter(h => h.is_active);
   const totalEarningRate = activeHeroes.reduce(
@@ -89,16 +87,12 @@ export default function SettingsScreen() {
 
   const handleOpenEditModal = () => {
     setNewUsername(profile?.username || '');
-    setCurrentPassword('');
     setNewPassword('');
     setConfirmPassword('');
-    setPasswordError('');
     setShowEditModal(true);
   };
 
   const handleSaveProfile = async () => {
-    setPasswordError('');
-    
     if (!newUsername.trim()) {
       Alert.alert('Error', 'Username cannot be empty');
       return;
@@ -110,16 +104,12 @@ export default function SettingsScreen() {
     }
 
     if (newPassword) {
-      if (!currentPassword) {
-        setPasswordError('Enter current password');
-        return;
-      }
       if (newPassword.length < 6) {
-        setPasswordError('New password must be at least 6 characters');
+        Alert.alert('Error', 'Password must be at least 6 characters');
         return;
       }
       if (newPassword !== confirmPassword) {
-        setPasswordError('Passwords do not match');
+        Alert.alert('Error', 'Passwords do not match');
         return;
       }
     }
@@ -128,26 +118,22 @@ export default function SettingsScreen() {
     
     const profileSuccess = await updateProfile({ username: newUsername.trim() });
     let passwordSuccess = true;
-    let passwordErrorMsg = '';
     
-    if (newPassword && currentPassword) {
-      const result = await changePassword(currentPassword, newPassword);
-      passwordSuccess = result.success;
-      passwordErrorMsg = result.error || '';
+    if (newPassword) {
+      passwordSuccess = await changePassword(newPassword);
     }
 
     setSaving(false);
 
     if (profileSuccess && passwordSuccess) {
       setShowEditModal(false);
-      setCurrentPassword('');
       setNewPassword('');
       setConfirmPassword('');
       Alert.alert('Success', newPassword ? 'Profile and password updated!' : 'Profile updated!');
     } else if (!profileSuccess) {
       Alert.alert('Error', 'Failed to update profile');
     } else {
-      setPasswordError(passwordErrorMsg);
+      Alert.alert('Error', 'Failed to change password');
     }
   };
 
@@ -536,22 +522,6 @@ export default function SettingsScreen() {
 
                 <Text style={styles.sectionLabel}>Change Password (Optional)</Text>
 
-                {passwordError ? <Text style={styles.errorHintTop}>{passwordError}</Text> : null}
-
-                <View style={styles.inputContainer}>
-                  <Text style={styles.inputLabel}>Current Password</Text>
-                  <TextInput
-                    style={styles.input}
-                    value={currentPassword}
-                    onChangeText={setCurrentPassword}
-                    placeholder="Enter current password"
-                    placeholderTextColor="#64748B"
-                    secureTextEntry={!showPassword}
-                    autoCapitalize="none"
-                    autoCorrect={false}
-                  />
-                </View>
-
                 <View style={styles.inputContainer}>
                   <Text style={styles.inputLabel}>New Password</Text>
                   <View style={styles.passwordInputContainer}>
@@ -572,7 +542,7 @@ export default function SettingsScreen() {
                       <Text style={styles.eyeButtonText}>{showPassword ? 'Hide' : 'Show'}</Text>
                     </TouchableOpacity>
                   </View>
-                  {newPassword && newPassword.length > 0 && newPassword.length < 6 ? (
+                  {newPassword.length > 0 && newPassword.length < 6 ? (
                     <Text style={styles.errorHint}>Min 6 characters required</Text>
                   ) : null}
                 </View>
@@ -1100,16 +1070,6 @@ const styles = StyleSheet.create({
     fontSize: 10,
     color: '#EF4444',
     marginTop: 6,
-  },
-  errorHintTop: {
-    fontSize: 11,
-    color: '#EF4444',
-    marginBottom: 12,
-    textAlign: 'center',
-    backgroundColor: 'rgba(239, 68, 68, 0.1)',
-    padding: 8,
-    borderRadius: 8,
-    width: '100%',
   },
   divider: {
     width: '100%',
