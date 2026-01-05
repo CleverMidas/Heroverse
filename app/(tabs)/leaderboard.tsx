@@ -269,7 +269,7 @@ const styles = StyleSheet.create({
   },
   scrollView: {
     flex: 1,
-    paddingHorizontal: 20,
+    paddingHorizontal: 10,
   },
   userCard: {
     backgroundColor: 'rgba(251, 191, 36, 0.1)',
