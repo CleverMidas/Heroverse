@@ -23,13 +23,33 @@ export default function LeaderboardScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [timeFilter, setTimeFilter] = useState<TimeFilter>('all');
 
-  const fetchLeaderboard = async () => {
+  const getTimeFilterDate = (filter: TimeFilter): string | null => {
+    const now = new Date();
+    if (filter === 'daily') {
+      now.setHours(now.getHours() - 24);
+      return now.toISOString();
+    }
+    if (filter === 'weekly') {
+      now.setDate(now.getDate() - 7);
+      return now.toISOString();
+    }
+    return null;
+  };
+
+  const fetchLeaderboard = async (filter: TimeFilter = timeFilter) => {
     try {
-      const { data, error } = await supabase
+      let query = supabase
         .from('profiles')
         .select('*')
         .order('supercash_balance', { ascending: false })
         .limit(100);
+
+      const filterDate = getTimeFilterDate(filter);
+      if (filterDate) {
+        query = query.gte('updated_at', filterDate);
+      }
+
+      const { data, error } = await query;
 
       if (error) throw error;
 
@@ -46,7 +66,7 @@ export default function LeaderboardScreen() {
         }
       }
     } catch (error) {
-      console.error('Error fetching leaderboard:', error);
+      setLeaderboard([]);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -57,9 +77,20 @@ export default function LeaderboardScreen() {
     fetchLeaderboard();
   }, [user]);
 
+  useEffect(() => {
+    setLoading(true);
+    fetchLeaderboard(timeFilter);
+  }, [timeFilter]);
+
   const onRefresh = () => {
     setRefreshing(true);
-    fetchLeaderboard();
+    fetchLeaderboard(timeFilter);
+  };
+
+  const getFilterLabel = () => {
+    if (timeFilter === 'daily') return 'Active today';
+    if (timeFilter === 'weekly') return 'Active this week';
+    return 'All time rankings';
   };
 
   const getRankIcon = (rank: number, size: number = 20) => {
@@ -178,52 +209,72 @@ export default function LeaderboardScreen() {
             </TouchableOpacity>
           </View>
 
-          {/* Top 3 Podium */}
-          {top3.length >= 3 && (
-            <View style={styles.podiumContainer}>
-              {/* 2nd Place */}
-              <View style={styles.podiumItem}>
-                <View style={[styles.podiumAvatar, styles.podiumSilver]}>
-                  <Medal color="#C0C0C0" size={24} />
-                </View>
-                <Text style={styles.podiumRank}>#2</Text>
-                <Text style={styles.podiumName} numberOfLines={1}>{top3[1]?.username || 'Anonymous'}</Text>
-                <View style={styles.podiumBalance}>
-                  <Coins color="#FBBF24" size={10} />
-                  <Text style={styles.podiumBalanceText}>{(top3[1]?.supercash_balance || 0).toLocaleString()}</Text>
-                </View>
-                <View style={[styles.podiumBar, styles.podiumBarSilver]} />
-              </View>
+          {/* Filter Info */}
+          <View style={styles.filterInfo}>
+            <Text style={styles.filterInfoText}>{getFilterLabel()}</Text>
+          </View>
 
-              {/* 1st Place */}
-              <View style={[styles.podiumItem, styles.podiumItemFirst]}>
-                <View style={[styles.podiumAvatar, styles.podiumGold]}>
-                  <Crown color="#FFD700" size={28} />
-                </View>
-                <Text style={[styles.podiumRank, styles.podiumRankFirst]}>#1</Text>
-                <Text style={[styles.podiumName, styles.podiumNameFirst]} numberOfLines={1}>{top3[0]?.username || 'Anonymous'}</Text>
-                <View style={styles.podiumBalance}>
-                  <Coins color="#FBBF24" size={10} />
-                  <Text style={styles.podiumBalanceText}>{(top3[0]?.supercash_balance || 0).toLocaleString()}</Text>
-                </View>
-                <View style={[styles.podiumBar, styles.podiumBarGold]} />
-              </View>
-
-              {/* 3rd Place */}
-              <View style={styles.podiumItem}>
-                <View style={[styles.podiumAvatar, styles.podiumBronze]}>
-                  <Medal color="#CD7F32" size={24} />
-                </View>
-                <Text style={styles.podiumRank}>#3</Text>
-                <Text style={styles.podiumName} numberOfLines={1}>{top3[2]?.username || 'Anonymous'}</Text>
-                <View style={styles.podiumBalance}>
-                  <Coins color="#FBBF24" size={10} />
-                  <Text style={styles.podiumBalanceText}>{(top3[2]?.supercash_balance || 0).toLocaleString()}</Text>
-                </View>
-                <View style={[styles.podiumBar, styles.podiumBarBronze]} />
-              </View>
+          {/* Empty State */}
+          {leaderboard.length === 0 ? (
+            <View style={styles.emptyState}>
+              <Trophy color="#64748B" size={48} />
+              <Text style={styles.emptyTitle}>No Players Found</Text>
+              <Text style={styles.emptyText}>
+                {timeFilter === 'daily' 
+                  ? 'No players have been active today yet' 
+                  : timeFilter === 'weekly'
+                  ? 'No players have been active this week'
+                  : 'No players on the leaderboard yet'}
+              </Text>
             </View>
-          )}
+          ) : (
+            <>
+              {/* Top 3 Podium */}
+              {top3.length >= 3 && (
+                <View style={styles.podiumContainer}>
+                  {/* 2nd Place */}
+                  <View style={styles.podiumItem}>
+                    <View style={[styles.podiumAvatar, styles.podiumSilver]}>
+                      <Medal color="#C0C0C0" size={24} />
+                    </View>
+                    <Text style={styles.podiumRank}>#2</Text>
+                    <Text style={styles.podiumName} numberOfLines={1}>{top3[1]?.username || 'Anonymous'}</Text>
+                    <View style={styles.podiumBalance}>
+                      <Coins color="#FBBF24" size={10} />
+                      <Text style={styles.podiumBalanceText}>{(top3[1]?.supercash_balance || 0).toLocaleString()}</Text>
+                    </View>
+                    <View style={[styles.podiumBar, styles.podiumBarSilver]} />
+                  </View>
+
+                  {/* 1st Place */}
+                  <View style={[styles.podiumItem, styles.podiumItemFirst]}>
+                    <View style={[styles.podiumAvatar, styles.podiumGold]}>
+                      <Crown color="#FFD700" size={28} />
+                    </View>
+                    <Text style={[styles.podiumRank, styles.podiumRankFirst]}>#1</Text>
+                    <Text style={[styles.podiumName, styles.podiumNameFirst]} numberOfLines={1}>{top3[0]?.username || 'Anonymous'}</Text>
+                    <View style={styles.podiumBalance}>
+                      <Coins color="#FBBF24" size={10} />
+                      <Text style={styles.podiumBalanceText}>{(top3[0]?.supercash_balance || 0).toLocaleString()}</Text>
+                    </View>
+                    <View style={[styles.podiumBar, styles.podiumBarGold]} />
+                  </View>
+
+                  {/* 3rd Place */}
+                  <View style={styles.podiumItem}>
+                    <View style={[styles.podiumAvatar, styles.podiumBronze]}>
+                      <Medal color="#CD7F32" size={24} />
+                    </View>
+                    <Text style={styles.podiumRank}>#3</Text>
+                    <Text style={styles.podiumName} numberOfLines={1}>{top3[2]?.username || 'Anonymous'}</Text>
+                    <View style={styles.podiumBalance}>
+                      <Coins color="#FBBF24" size={10} />
+                      <Text style={styles.podiumBalanceText}>{(top3[2]?.supercash_balance || 0).toLocaleString()}</Text>
+                    </View>
+                    <View style={[styles.podiumBar, styles.podiumBarBronze]} />
+                  </View>
+                </View>
+              )}
 
           {/* Your Rank Card */}
           {userRank && profile && userRank > 3 && (
@@ -292,71 +343,73 @@ export default function LeaderboardScreen() {
           {/* Leaderboard List */}
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Rankings</Text>
-            <View style={styles.leaderboardList}>
+          <View style={styles.leaderboardList}>
               {restOfLeaderboard.map((entry) => {
-                const isCurrentUser = user && entry.id === user.id;
-                const rankColor = getRankColor(entry.rank);
-                const bgColor = getRankBgColor(entry.rank);
-                const borderColor = getRankBorderColor(entry.rank);
+              const isCurrentUser = user && entry.id === user.id;
+              const rankColor = getRankColor(entry.rank);
+              const bgColor = getRankBgColor(entry.rank);
+              const borderColor = getRankBorderColor(entry.rank);
 
-                return (
-                  <View
-                    key={entry.id}
-                    style={[
-                      styles.leaderboardCard,
-                      {
-                        backgroundColor: isCurrentUser ? 'rgba(251, 191, 36, 0.15)' : bgColor,
-                        borderColor: isCurrentUser ? 'rgba(251, 191, 36, 0.4)' : borderColor,
-                        borderWidth: isCurrentUser ? 2 : 1,
-                      },
-                    ]}
-                  >
-                    <View style={styles.leaderboardLeft}>
-                      <View
+              return (
+                <View
+                  key={entry.id}
+                  style={[
+                    styles.leaderboardCard,
+                    {
+                      backgroundColor: isCurrentUser ? 'rgba(251, 191, 36, 0.15)' : bgColor,
+                      borderColor: isCurrentUser ? 'rgba(251, 191, 36, 0.4)' : borderColor,
+                      borderWidth: isCurrentUser ? 2 : 1,
+                    },
+                  ]}
+                >
+                  <View style={styles.leaderboardLeft}>
+                    <View
+                      style={[
+                        styles.rankBadge,
+                        {
+                          backgroundColor: entry.rank <= 3 ? rankColor + '20' : 'rgba(51, 65, 85, 0.5)',
+                        },
+                      ]}
+                    >
+                      <Text
                         style={[
-                          styles.rankBadge,
-                          {
-                            backgroundColor: entry.rank <= 3 ? rankColor + '20' : 'rgba(51, 65, 85, 0.5)',
-                          },
+                          styles.rankText,
+                          { color: rankColor },
                         ]}
                       >
-                        <Text
-                          style={[
-                            styles.rankText,
-                            { color: rankColor },
-                          ]}
-                        >
-                          #{entry.rank}
-                        </Text>
-                      </View>
-                      <View style={styles.playerInfo}>
-                        <Text
-                          style={[
-                            styles.playerName,
-                            isCurrentUser && { color: '#FBBF24' }
-                          ]}
-                          numberOfLines={1}
-                        >
-                          {entry.username || 'Anonymous'}
-                        </Text>
-                        {isCurrentUser && (
-                          <Text style={styles.youBadge}>You</Text>
-                        )}
-                      </View>
+                        #{entry.rank}
+                      </Text>
                     </View>
-                    <View style={styles.leaderboardRight}>
-                      <View style={styles.balanceContainer}>
-                        <Coins color="#FBBF24" size={12} />
-                        <Text style={styles.balanceText}>
-                          {entry.supercash_balance.toLocaleString()}
-                        </Text>
-                      </View>
+                    <View style={styles.playerInfo}>
+                      <Text
+                        style={[
+                          styles.playerName,
+                          isCurrentUser && { color: '#FBBF24' }
+                        ]}
+                        numberOfLines={1}
+                      >
+                        {entry.username || 'Anonymous'}
+                      </Text>
+                      {isCurrentUser && (
+                        <Text style={styles.youBadge}>You</Text>
+                      )}
                     </View>
                   </View>
-                );
-              })}
+                  <View style={styles.leaderboardRight}>
+                    <View style={styles.balanceContainer}>
+                        <Coins color="#FBBF24" size={12} />
+                      <Text style={styles.balanceText}>
+                        {entry.supercash_balance.toLocaleString()}
+                      </Text>
+                      </View>
+                  </View>
+                </View>
+              );
+            })}
             </View>
           </View>
+            </>
+          )}
 
           {/* Upcoming Tournaments */}
           <View style={styles.section}>
@@ -515,6 +568,37 @@ const styles = StyleSheet.create({
   },
   filterTabTextActive: {
     color: '#FBBF24',
+  },
+  // Filter Info
+  filterInfo: {
+    marginBottom: 12,
+  },
+  filterInfoText: {
+    fontSize: 11,
+    color: '#94A3B8',
+    textAlign: 'center',
+  },
+  // Empty State
+  emptyState: {
+    backgroundColor: 'rgba(30, 41, 59, 0.6)',
+    borderRadius: 16,
+    padding: 32,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(100, 116, 139, 0.2)',
+    marginBottom: 20,
+  },
+  emptyTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  emptyText: {
+    fontSize: 12,
+    color: '#94A3B8',
+    textAlign: 'center',
   },
   // Podium
   podiumContainer: {
