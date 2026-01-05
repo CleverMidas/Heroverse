@@ -96,14 +96,6 @@ export default function HeroesScreen() {
     >
       <View style={styles.overlay}>
       <SafeAreaView style={styles.safeArea}>
-        <View style={styles.header}>
-          <Text style={styles.title}>My Heroes</Text>
-          <View style={styles.heroCount}>
-            <Zap color="#FBBF24" size={16} />
-            <Text style={styles.heroCountText}>{userHeroes.length}</Text>
-          </View>
-        </View>
-
         {error && (
           <View style={styles.errorContainer}>
             <Text style={styles.errorText}>{error}</Text>
@@ -466,6 +458,7 @@ const styles = StyleSheet.create({
   scrollView: {
     flex: 1,
     paddingHorizontal: 20,
+    paddingTop: 13
   },
   claimCard: {
     borderRadius: 16,

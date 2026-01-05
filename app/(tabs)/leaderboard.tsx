@@ -113,16 +113,6 @@ export default function LeaderboardScreen() {
     >
       <View style={styles.overlay}>
       <SafeAreaView style={styles.safeArea}>
-        <View style={styles.header}>
-          <View style={styles.headerContent}>
-            <Trophy color="#FBBF24" size={32} />
-            <View style={styles.headerText}>
-              <Text style={styles.title}>Leaderboard</Text>
-              <Text style={styles.subtitle}>Top SuperCash Earners</Text>
-            </View>
-          </View>
-        </View>
-
         <ScrollView
           style={styles.scrollView}
           showsVerticalScrollIndicator={false}
@@ -288,6 +278,7 @@ const styles = StyleSheet.create({
     marginBottom: 24,
     borderWidth: 1,
     borderColor: 'rgba(251, 191, 36, 0.3)',
+    marginTop: 13
   },
   userCardHeader: {
     flexDirection: 'row',

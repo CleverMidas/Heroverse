@@ -77,10 +77,6 @@ export default function SettingsScreen() {
     >
       <View style={styles.overlay}>
       <SafeAreaView style={styles.safeArea}>
-        <View style={styles.header}>
-          <Text style={styles.title}>Settings</Text>
-        </View>
-
         <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
           <View style={styles.profileCard}>
             <View style={styles.profileAvatar}>
@@ -168,6 +164,7 @@ const styles = StyleSheet.create({
     marginBottom: 24,
     borderWidth: 1,
     borderColor: 'rgba(100, 116, 139, 0.2)',
+    marginTop: 13
   },
   profileAvatar: {
     width: 64,

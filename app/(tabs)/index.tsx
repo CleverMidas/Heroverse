@@ -43,18 +43,6 @@ export default function HomeScreen() {
       <View style={styles.overlay}>
       <SafeAreaView style={styles.safeArea}>
         <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-          <View style={styles.header}>
-            <View>
-              <Text style={styles.greeting}>Welcome back,</Text>
-              <Text style={styles.username}>
-                {profile?.username || user?.email?.split('@')[0] || 'Hero'}
-              </Text>
-            </View>
-            <View style={styles.logoIcon}>
-              <Zap color="#FBBF24" size={28} strokeWidth={2.5} />
-            </View>
-          </View>
-
           <View style={styles.balanceCard}>
             <LinearGradient
               colors={['#FBBF24', '#F59E0B']}
@@ -280,6 +268,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     overflow: 'hidden',
     marginBottom: 16,
+    marginTop: 13
   },
   balanceGradient: {
     padding: 24,
