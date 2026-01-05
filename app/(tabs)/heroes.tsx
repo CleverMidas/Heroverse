@@ -8,7 +8,11 @@ import {
   Image,
   ActivityIndicator,
   Modal,
+  ImageBackground,
+  Dimensions,
 } from 'react-native';
+
+const { width, height } = Dimensions.get('window');
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useAuth } from '@/contexts/AuthContext';
@@ -69,17 +73,28 @@ export default function HeroesScreen() {
 
   if (loading) {
     return (
-      <LinearGradient colors={['#0F172A', '#1E293B']} style={styles.container}>
-        <SafeAreaView style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#FBBF24" />
-          <Text style={styles.loadingText}>Loading heroes...</Text>
-        </SafeAreaView>
-      </LinearGradient>
+      <ImageBackground 
+        source={require('@/assets/photo_2025-12-10_12-50-44.jpg')} 
+        style={styles.container}
+        resizeMode="cover"
+      >
+        <View style={styles.overlay}>
+          <SafeAreaView style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color="#FBBF24" />
+            <Text style={styles.loadingText}>Loading heroes...</Text>
+          </SafeAreaView>
+        </View>
+      </ImageBackground>
     );
   }
 
   return (
-    <LinearGradient colors={['#0F172A', '#1E293B']} style={styles.container}>
+    <ImageBackground 
+      source={require('@/assets/photo_2025-12-10_12-50-44.jpg')} 
+      style={styles.container}
+      resizeMode="cover"
+    >
+      <View style={styles.overlay}>
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.header}>
           <Text style={styles.title}>My Heroes</Text>
@@ -380,13 +395,20 @@ export default function HeroesScreen() {
           </View>
         </Modal>
       </SafeAreaView>
-    </LinearGradient>
+      </View>
+    </ImageBackground>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    width: width,
+    height: height,
+  },
+  overlay: {
+    flex: 1,
+    backgroundColor: 'rgba(15, 23, 42, 0.85)',
   },
   safeArea: {
     flex: 1,

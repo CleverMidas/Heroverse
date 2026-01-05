@@ -20,7 +20,7 @@ import { Mail, Lock, Eye, EyeOff, User, AlertCircle } from 'lucide-react-native'
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 
-const { width, height } = Dimensions.get('screen');
+const { width, height } = Dimensions.get('window');
 
 const backgroundImage = require('@/assets/photo_2025-12-10_12-50-44.jpg');
 
