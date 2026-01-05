@@ -6,7 +6,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
 import { useGame } from '@/contexts/GameContext';
-import { Zap, TrendingUp, Clock, Coins, ChevronRight, Sparkles } from 'lucide-react-native';
+import { Zap, TrendingUp, Clock, Coins, ChevronRight, Sparkles, Wallet, ArrowUpRight, ArrowDownLeft, Gift, Target, Trophy, Shield, Globe, Lock } from 'lucide-react-native';
 import { getHeroImageSource } from '@/lib/heroImages';
 
 export default function HomeScreen() {
@@ -34,6 +34,12 @@ export default function HomeScreen() {
     return num.toLocaleString();
   };
 
+  // Mock data for future features
+  const heroVerseTokenBalance = 0;
+  const heroVerseTokenPrice = 0.0042;
+  const dailyQuestProgress = 2;
+  const dailyQuestTotal = 5;
+
   return (
     <ImageBackground 
       source={require('@/assets/photo_2025-12-10_12-50-44.jpg')} 
@@ -43,33 +49,82 @@ export default function HomeScreen() {
       <View style={styles.overlay}>
       <SafeAreaView style={styles.safeArea}>
         <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-          <View style={styles.balanceCard}>
-            <LinearGradient
-              colors={['#FBBF24', '#F59E0B']}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={styles.balanceGradient}
-            >
-              <View style={styles.balanceHeader}>
-                <View style={styles.balanceIconContainer}>
-                  <Coins color="#0F172A" size={24} />
+          {/* Balance Cards Row */}
+          <View style={styles.balanceRow}>
+            {/* SuperCash Balance */}
+            <View style={styles.balanceCardSmall}>
+              <LinearGradient
+                colors={['#FBBF24', '#F59E0B']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.balanceGradientSmall}
+              >
+                <View style={styles.balanceHeaderSmall}>
+                  <View style={styles.balanceIconContainerSmall}>
+                    <Coins color="#0F172A" size={18} />
+                  </View>
+                  <Text style={styles.balanceLabelSmall}>SuperCash</Text>
                 </View>
-                <Text style={styles.balanceLabel}>SuperCash Balance</Text>
+                <Text style={styles.balanceAmountSmall}>
+                  {formatNumber(profile?.supercash_balance || 0)}
+                </Text>
+                <View style={styles.balanceFooterSmall}>
+                  <TrendingUp color="#0F172A" size={12} />
+                  <Text style={styles.statTextSmall}>{formatNumber(totalEarningRate)}/hr</Text>
+                </View>
+              </LinearGradient>
+            </View>
+
+            {/* HeroVerse Token Balance */}
+            <View style={styles.balanceCardSmall}>
+              <LinearGradient
+                colors={['#8B5CF6', '#7C3AED']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.balanceGradientSmall}
+              >
+                <View style={styles.balanceHeaderSmall}>
+                  <View style={styles.balanceIconContainerSmall}>
+                    <Wallet color="#FFFFFF" size={18} />
+                  </View>
+                  <Text style={[styles.balanceLabelSmall, { color: '#FFFFFF' }]}>$HERO</Text>
+                </View>
+                <Text style={[styles.balanceAmountSmall, { color: '#FFFFFF' }]}>
+                  {formatNumber(heroVerseTokenBalance)}
+                </Text>
+                <View style={styles.balanceFooterSmall}>
+                  <Text style={[styles.statTextSmall, { color: 'rgba(255,255,255,0.8)' }]}>≈ ${(heroVerseTokenBalance * heroVerseTokenPrice).toFixed(2)}</Text>
+                </View>
+              </LinearGradient>
+            </View>
+          </View>
+
+          {/* Quick Actions */}
+          <View style={styles.quickActions}>
+            <TouchableOpacity style={styles.actionButton}>
+              <View style={[styles.actionIcon, { backgroundColor: 'rgba(34, 197, 94, 0.15)' }]}>
+                <ArrowDownLeft color="#22C55E" size={20} />
               </View>
-              <Text style={styles.balanceAmount}>
-                {formatNumber(profile?.supercash_balance || 0)}
-              </Text>
-              <View style={styles.balanceFooter}>
-                <View style={styles.statItem}>
-                  <TrendingUp color="#0F172A" size={16} />
-                  <Text style={styles.statText}>{formatNumber(totalEarningRate)}/hr</Text>
-                </View>
-                <View style={styles.statItem}>
-                  <Users color="#0F172A" size={16} />
-                  <Text style={styles.statText}>{activeHeroes.length} Active</Text>
-                </View>
+              <Text style={styles.actionText}>Deposit</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.actionButton}>
+              <View style={[styles.actionIcon, { backgroundColor: 'rgba(59, 130, 246, 0.15)' }]}>
+                <ArrowUpRight color="#3B82F6" size={20} />
               </View>
-            </LinearGradient>
+              <Text style={styles.actionText}>Withdraw</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.actionButton}>
+              <View style={[styles.actionIcon, { backgroundColor: 'rgba(251, 191, 36, 0.15)' }]}>
+                <Coins color="#FBBF24" size={20} />
+              </View>
+              <Text style={styles.actionText}>Swap</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.actionButton}>
+              <View style={[styles.actionIcon, { backgroundColor: 'rgba(168, 85, 247, 0.15)' }]}>
+                <Lock color="#A855F7" size={20} />
+              </View>
+              <Text style={styles.actionText}>Stake</Text>
+            </TouchableOpacity>
           </View>
 
           {pendingSupercash > 0 && (
@@ -98,6 +153,59 @@ export default function HomeScreen() {
             </TouchableOpacity>
           )}
 
+          {/* Daily Quests Preview */}
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Daily Quests</Text>
+              <TouchableOpacity style={styles.seeAllButton}>
+                <Text style={styles.seeAllText}>View All</Text>
+                <ChevronRight color="#FBBF24" size={16} />
+              </TouchableOpacity>
+            </View>
+            <View style={styles.questCard}>
+              <View style={styles.questProgress}>
+                <View style={styles.questProgressHeader}>
+                  <View style={styles.questIconContainer}>
+                    <Target color="#FBBF24" size={20} />
+                  </View>
+                  <View style={styles.questInfo}>
+                    <Text style={styles.questTitle}>Daily Progress</Text>
+                    <Text style={styles.questSubtitle}>{dailyQuestProgress}/{dailyQuestTotal} Completed</Text>
+                  </View>
+                  <View style={styles.questReward}>
+                    <Gift color="#22C55E" size={16} />
+                    <Text style={styles.questRewardText}>+50</Text>
+                  </View>
+                </View>
+                <View style={styles.progressBar}>
+                  <View style={[styles.progressFill, { width: `${(dailyQuestProgress / dailyQuestTotal) * 100}%` }]} />
+                </View>
+              </View>
+              <View style={styles.questList}>
+                <View style={styles.questItem}>
+                  <View style={[styles.questCheck, styles.questCheckCompleted]}>
+                    <Text style={styles.questCheckText}>✓</Text>
+                  </View>
+                  <Text style={[styles.questItemText, styles.questItemCompleted]}>Login Daily</Text>
+                  <Text style={styles.questItemReward}>+10 SC</Text>
+                </View>
+                <View style={styles.questItem}>
+                  <View style={[styles.questCheck, styles.questCheckCompleted]}>
+                    <Text style={styles.questCheckText}>✓</Text>
+                  </View>
+                  <Text style={[styles.questItemText, styles.questItemCompleted]}>Collect Earnings</Text>
+                  <Text style={styles.questItemReward}>+10 SC</Text>
+                </View>
+                <View style={styles.questItem}>
+                  <View style={styles.questCheck} />
+                  <Text style={styles.questItemText}>Win 3 Battles</Text>
+                  <Text style={styles.questItemReward}>+30 SC</Text>
+                </View>
+              </View>
+            </View>
+          </View>
+
+          {/* Active Heroes */}
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionTitle}>Active Heroes</Text>
@@ -176,39 +284,125 @@ export default function HomeScreen() {
             )}
           </View>
 
+          {/* Stats Grid - Compact */}
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Quick Stats</Text>
-            <View style={styles.statsGrid}>
-              <View style={styles.statCard}>
-                <View style={[styles.statIconContainer, { backgroundColor: 'rgba(251, 191, 36, 0.15)' }]}>
-                  <Coins color="#FBBF24" size={24} />
-                </View>
-                <Text style={styles.statCardValue}>{formatNumber(totalEarningRate)}</Text>
-                <Text style={styles.statCardLabel}>SuperCash/hr</Text>
+            <View style={styles.statsGridCompact}>
+              <View style={styles.statCardCompact}>
+                <Coins color="#FBBF24" size={18} />
+                <Text style={styles.statCardValueCompact}>{formatNumber(totalEarningRate)}</Text>
+                <Text style={styles.statCardLabelCompact}>SC/hr</Text>
               </View>
-              <View style={styles.statCard}>
-                <View style={[styles.statIconContainer, { backgroundColor: 'rgba(34, 197, 94, 0.15)' }]}>
-                  <Users color="#22C55E" size={24} />
-                </View>
-                <Text style={styles.statCardValue}>{userHeroes.length}</Text>
-                <Text style={styles.statCardLabel}>Total Heroes</Text>
+              <View style={styles.statCardCompact}>
+                <Users color="#22C55E" size={18} />
+                <Text style={styles.statCardValueCompact}>{userHeroes.length}</Text>
+                <Text style={styles.statCardLabelCompact}>Heroes</Text>
               </View>
-              <View style={styles.statCard}>
-                <View style={[styles.statIconContainer, { backgroundColor: 'rgba(59, 130, 246, 0.15)' }]}>
-                  <Zap color="#3B82F6" size={24} />
-                </View>
-                <Text style={styles.statCardValue}>{activeHeroes.length}</Text>
-                <Text style={styles.statCardLabel}>Active Now</Text>
+              <View style={styles.statCardCompact}>
+                <Zap color="#3B82F6" size={18} />
+                <Text style={styles.statCardValueCompact}>{activeHeroes.length}</Text>
+                <Text style={styles.statCardLabelCompact}>Active</Text>
               </View>
-              <View style={styles.statCard}>
-                <View style={[styles.statIconContainer, { backgroundColor: 'rgba(168, 85, 247, 0.15)' }]}>
-                  <Clock color="#A855F7" size={24} />
-                </View>
-                <Text style={styles.statCardValue}>{formatNumber(pendingSupercash)}</Text>
-                <Text style={styles.statCardLabel}>Pending</Text>
+              <View style={styles.statCardCompact}>
+                <Clock color="#A855F7" size={18} />
+                <Text style={styles.statCardValueCompact}>{formatNumber(pendingSupercash)}</Text>
+                <Text style={styles.statCardLabelCompact}>Pending</Text>
               </View>
             </View>
           </View>
+
+          {/* Web3 Features Preview */}
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>HeroVerse Ecosystem</Text>
+              <View style={styles.comingSoonBadge}>
+                <Text style={styles.comingSoonText}>Coming Soon</Text>
+              </View>
+            </View>
+            <View style={styles.web3Grid}>
+              <TouchableOpacity style={styles.web3Card}>
+                <LinearGradient
+                  colors={['rgba(139, 92, 246, 0.2)', 'rgba(139, 92, 246, 0.05)']}
+                  style={styles.web3CardGradient}
+                >
+                  <View style={styles.web3IconContainer}>
+                    <Globe color="#8B5CF6" size={24} />
+                  </View>
+                  <Text style={styles.web3CardTitle}>NFT Market</Text>
+                  <Text style={styles.web3CardDesc}>Trade Hero NFTs</Text>
+                  <View style={styles.lockedOverlay}>
+                    <Lock color="#64748B" size={16} />
+                  </View>
+                </LinearGradient>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.web3Card}>
+                <LinearGradient
+                  colors={['rgba(34, 197, 94, 0.2)', 'rgba(34, 197, 94, 0.05)']}
+                  style={styles.web3CardGradient}
+                >
+                  <View style={styles.web3IconContainer}>
+                    <Shield color="#22C55E" size={24} />
+                  </View>
+                  <Text style={styles.web3CardTitle}>Staking</Text>
+                  <Text style={styles.web3CardDesc}>Earn $HERO</Text>
+                  <View style={styles.lockedOverlay}>
+                    <Lock color="#64748B" size={16} />
+                  </View>
+                </LinearGradient>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.web3Card}>
+                <LinearGradient
+                  colors={['rgba(251, 191, 36, 0.2)', 'rgba(251, 191, 36, 0.05)']}
+                  style={styles.web3CardGradient}
+                >
+                  <View style={styles.web3IconContainer}>
+                    <Trophy color="#FBBF24" size={24} />
+                  </View>
+                  <Text style={styles.web3CardTitle}>Tournaments</Text>
+                  <Text style={styles.web3CardDesc}>Compete & Win</Text>
+                  <View style={styles.lockedOverlay}>
+                    <Lock color="#64748B" size={16} />
+                  </View>
+                </LinearGradient>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.web3Card}>
+                <LinearGradient
+                  colors={['rgba(59, 130, 246, 0.2)', 'rgba(59, 130, 246, 0.05)']}
+                  style={styles.web3CardGradient}
+                >
+                  <View style={styles.web3IconContainer}>
+                    <Sparkles color="#3B82F6" size={24} />
+                  </View>
+                  <Text style={styles.web3CardTitle}>Governance</Text>
+                  <Text style={styles.web3CardDesc}>Vote & Decide</Text>
+                  <View style={styles.lockedOverlay}>
+                    <Lock color="#64748B" size={16} />
+                  </View>
+                </LinearGradient>
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          {/* Token Info Banner */}
+          <TouchableOpacity style={styles.tokenBanner}>
+            <LinearGradient
+              colors={['rgba(139, 92, 246, 0.3)', 'rgba(59, 130, 246, 0.3)']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.tokenBannerGradient}
+            >
+              <View style={styles.tokenBannerContent}>
+                <View style={styles.tokenBannerIcon}>
+                  <Text style={styles.tokenBannerEmoji}>🚀</Text>
+                </View>
+                <View style={styles.tokenBannerText}>
+                  <Text style={styles.tokenBannerTitle}>$HERO Token Launch</Text>
+                  <Text style={styles.tokenBannerDesc}>Join the whitelist for exclusive benefits</Text>
+                </View>
+              </View>
+              <ChevronRight color="#FFFFFF" size={20} />
+            </LinearGradient>
+          </TouchableOpacity>
 
           <View style={styles.bottomSpacer} />
         </ScrollView>
@@ -237,88 +431,91 @@ const styles = StyleSheet.create({
   },
   scrollView: {
     flex: 1,
-    paddingHorizontal: 20,
+    paddingHorizontal: 16,
   },
-  header: {
+  // Balance Cards Row
+  balanceRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginTop: 16,
-    marginBottom: 24,
-  },
-  greeting: {
-    fontSize: 14,
-    color: '#94A3B8',
-  },
-  username: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: '#FFFFFF',
-    marginTop: 4,
-  },
-  logoIcon: {
-    width: 52,
-    height: 52,
-    borderRadius: 16,
-    backgroundColor: 'rgba(251, 191, 36, 0.15)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  balanceCard: {
-    borderRadius: 20,
-    overflow: 'hidden',
+    gap: 12,
+    marginTop: 12,
     marginBottom: 16,
-    marginTop: 13
   },
-  balanceGradient: {
-    padding: 24,
+  balanceCardSmall: {
+    flex: 1,
+    borderRadius: 16,
+    overflow: 'hidden',
   },
-  balanceHeader: {
+  balanceGradientSmall: {
+    padding: 16,
+  },
+  balanceHeaderSmall: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: 8,
   },
-  balanceIconContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
+  balanceIconContainerSmall: {
+    width: 32,
+    height: 32,
+    borderRadius: 10,
     backgroundColor: 'rgba(15, 23, 42, 0.2)',
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 12,
+    marginRight: 8,
   },
-  balanceLabel: {
-    fontSize: 14,
+  balanceLabelSmall: {
+    fontSize: 12,
     fontWeight: '600',
     color: '#0F172A',
   },
-  balanceAmount: {
-    fontSize: 42,
+  balanceAmountSmall: {
+    fontSize: 28,
     fontWeight: '800',
     color: '#0F172A',
+    marginBottom: 4,
+  },
+  balanceFooterSmall: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  statTextSmall: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#0F172A',
+  },
+  // Quick Actions
+  quickActions: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     marginBottom: 16,
+    paddingHorizontal: 8,
   },
-  balanceFooter: {
-    flexDirection: 'row',
-    gap: 24,
-  },
-  statItem: {
-    flexDirection: 'row',
+  actionButton: {
     alignItems: 'center',
     gap: 6,
   },
-  statText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#0F172A',
+  actionIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 14,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(100, 116, 139, 0.2)',
   },
+  actionText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#94A3B8',
+  },
+  // Collect Card
   collectCard: {
-    borderRadius: 16,
+    borderRadius: 14,
     overflow: 'hidden',
-    marginBottom: 24,
+    marginBottom: 16,
   },
   collectGradient: {
-    padding: 20,
+    padding: 16,
   },
   collectContent: {
     flexDirection: 'row',
@@ -326,175 +523,372 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   collectLabel: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '500',
     color: 'rgba(255, 255, 255, 0.8)',
-    marginBottom: 4,
+    marginBottom: 2,
   },
   collectAmount: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 6,
   },
   collectValue: {
-    fontSize: 24,
+    fontSize: 22,
     fontWeight: '700',
     color: '#FFFFFF',
   },
   collectButton: {
     backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 10,
   },
   collectButtonText: {
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: '700',
     color: '#FFFFFF',
   },
+  // Sections
   section: {
-    marginBottom: 24,
+    marginBottom: 20,
   },
   sectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: 12,
   },
   sectionTitle: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '700',
     color: '#FFFFFF',
   },
   seeAllButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    gap: 2,
   },
   seeAllText: {
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: '600',
     color: '#FBBF24',
   },
+  // Quest Card
+  questCard: {
+    backgroundColor: 'rgba(30, 41, 59, 0.6)',
+    borderRadius: 14,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: 'rgba(100, 116, 139, 0.2)',
+  },
+  questProgress: {
+    marginBottom: 12,
+  },
+  questProgressHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  questIconContainer: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: 'rgba(251, 191, 36, 0.15)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 10,
+  },
+  questInfo: {
+    flex: 1,
+  },
+  questTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  questSubtitle: {
+    fontSize: 11,
+    color: '#94A3B8',
+  },
+  questReward: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: 'rgba(34, 197, 94, 0.15)',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+  },
+  questRewardText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#22C55E',
+  },
+  progressBar: {
+    height: 6,
+    backgroundColor: 'rgba(100, 116, 139, 0.2)',
+    borderRadius: 3,
+    overflow: 'hidden',
+  },
+  progressFill: {
+    height: '100%',
+    backgroundColor: '#FBBF24',
+    borderRadius: 3,
+  },
+  questList: {
+    gap: 8,
+  },
+  questItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  questCheck: {
+    width: 20,
+    height: 20,
+    borderRadius: 6,
+    borderWidth: 2,
+    borderColor: 'rgba(100, 116, 139, 0.4)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  questCheckCompleted: {
+    backgroundColor: '#22C55E',
+    borderColor: '#22C55E',
+  },
+  questCheckText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  questItemText: {
+    flex: 1,
+    fontSize: 12,
+    color: '#FFFFFF',
+  },
+  questItemCompleted: {
+    color: '#94A3B8',
+    textDecorationLine: 'line-through',
+  },
+  questItemReward: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#FBBF24',
+  },
+  // Empty State
   emptyState: {
     backgroundColor: 'rgba(30, 41, 59, 0.5)',
-    borderRadius: 16,
-    padding: 32,
+    borderRadius: 14,
+    padding: 24,
     alignItems: 'center',
     borderWidth: 1,
     borderColor: 'rgba(100, 116, 139, 0.2)',
   },
   emptyIcon: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
     backgroundColor: 'rgba(100, 116, 139, 0.1)',
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: 12,
   },
   emptyTitle: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '700',
     color: '#FFFFFF',
-    marginBottom: 8,
+    marginBottom: 6,
   },
   emptyText: {
-    fontSize: 14,
+    fontSize: 12,
     color: '#94A3B8',
     textAlign: 'center',
-    lineHeight: 20,
-    marginBottom: 20,
+    lineHeight: 18,
+    marginBottom: 16,
   },
   emptyButton: {
     backgroundColor: '#FBBF24',
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 12,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 10,
   },
   emptyButtonText: {
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: '700',
     color: '#0F172A',
   },
+  // Heroes Scroll
   heroesScroll: {
-    paddingRight: 20,
-    gap: 12,
+    paddingRight: 16,
+    gap: 10,
   },
   heroCard: {
-    width: 140,
+    width: 120,
     backgroundColor: 'rgba(30, 41, 59, 0.8)',
-    borderRadius: 16,
+    borderRadius: 12,
     overflow: 'hidden',
     borderWidth: 2,
   },
   heroImage: {
     width: '100%',
-    height: 120,
+    height: 100,
   },
   heroInfo: {
-    padding: 12,
+    padding: 10,
   },
   heroName: {
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: '700',
     color: '#FFFFFF',
-    marginBottom: 6,
+    marginBottom: 4,
   },
   rarityBadge: {
     alignSelf: 'flex-start',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
-    marginBottom: 8,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+    marginBottom: 6,
   },
   rarityText: {
-    fontSize: 10,
+    fontSize: 9,
     fontWeight: '700',
   },
   heroEarning: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    gap: 3,
   },
   heroEarningText: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '600',
     color: '#FBBF24',
   },
-  statsGrid: {
+  // Stats Grid Compact
+  statsGridCompact: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 12,
+    gap: 10,
+    marginTop: 8,
   },
-  statCard: {
+  statCardCompact: {
     flex: 1,
-    minWidth: '45%',
     backgroundColor: 'rgba(30, 41, 59, 0.5)',
-    borderRadius: 16,
-    padding: 16,
+    borderRadius: 12,
+    padding: 12,
+    alignItems: 'center',
     borderWidth: 1,
     borderColor: 'rgba(100, 116, 139, 0.2)',
   },
-  statIconContainer: {
-    width: 44,
-    height: 44,
-    borderRadius: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  statCardValue: {
-    fontSize: 20,
+  statCardValueCompact: {
+    fontSize: 16,
     fontWeight: '700',
     color: '#FFFFFF',
-    marginBottom: 4,
+    marginTop: 6,
+    marginBottom: 2,
   },
-  statCardLabel: {
-    fontSize: 12,
+  statCardLabelCompact: {
+    fontSize: 10,
     color: '#94A3B8',
   },
+  // Web3 Grid
+  web3Grid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+  },
+  web3Card: {
+    width: (width - 42) / 2,
+    borderRadius: 12,
+    overflow: 'hidden',
+  },
+  web3CardGradient: {
+    padding: 14,
+    borderWidth: 1,
+    borderColor: 'rgba(100, 116, 139, 0.2)',
+    borderRadius: 12,
+    position: 'relative',
+  },
+  web3IconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 10,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  web3CardTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    marginBottom: 2,
+  },
+  web3CardDesc: {
+    fontSize: 11,
+    color: '#94A3B8',
+  },
+  lockedOverlay: {
+    position: 'absolute',
+    top: 14,
+    right: 14,
+    opacity: 0.5,
+  },
+  comingSoonBadge: {
+    backgroundColor: 'rgba(139, 92, 246, 0.2)',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+  },
+  comingSoonText: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: '#8B5CF6',
+  },
+  // Token Banner
+  tokenBanner: {
+    borderRadius: 14,
+    overflow: 'hidden',
+    marginBottom: 8,
+  },
+  tokenBannerGradient: {
+    padding: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(139, 92, 246, 0.3)',
+    borderRadius: 14,
+  },
+  tokenBannerContent: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  tokenBannerIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 10,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  tokenBannerEmoji: {
+    fontSize: 20,
+  },
+  tokenBannerText: {
+    flex: 1,
+  },
+  tokenBannerTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    marginBottom: 2,
+  },
+  tokenBannerDesc: {
+    fontSize: 11,
+    color: 'rgba(255, 255, 255, 0.7)',
+  },
   bottomSpacer: {
-    height: 20,
+    height: 24,
   },
 });
