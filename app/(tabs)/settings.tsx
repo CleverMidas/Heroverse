@@ -1,5 +1,6 @@
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, Platform, ImageBackground, Dimensions, Switch } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, Platform, ImageBackground, Dimensions, Switch, Modal, TextInput, ActivityIndicator } from 'react-native';
 import { useState } from 'react';
+import * as Clipboard from 'expo-clipboard';
 
 const { width, height } = Dimensions.get('window');
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -22,7 +23,6 @@ import {
   Link2,
   Gift,
   Copy,
-  ExternalLink,
   Twitter,
   MessageCircle,
   Lock,
@@ -30,20 +30,33 @@ import {
   TrendingUp,
   Users,
   Check,
+  X,
+  Edit3,
 } from 'lucide-react-native';
 
 export default function SettingsScreen() {
   const router = useRouter();
-  const { user, profile, signOut } = useAuth();
+  const { user, profile, signOut, updateProfile, changePassword } = useAuth();
   const { userHeroes } = useGame();
   const [pushNotifications, setPushNotifications] = useState(true);
   const [emailNotifications, setEmailNotifications] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [newUsername, setNewUsername] = useState(profile?.username || '');
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const [passwordError, setPasswordError] = useState('');
 
   const activeHeroes = userHeroes.filter(h => h.is_active);
   const totalEarningRate = activeHeroes.reduce(
     (sum, h) => sum + h.heroes.hero_rarities.supercash_per_hour,
     0
   );
+
+  const referralCode = `HERO${profile?.id?.slice(0, 6).toUpperCase() || 'XXXXXX'}`;
 
   const handleSignOut = () => {
     if (Platform.OS === 'web') {
@@ -68,9 +81,74 @@ export default function SettingsScreen() {
     }
   };
 
-  const handleCopyReferral = () => {
-    // Copy referral code logic
-    Alert.alert('Copied!', 'Referral code copied to clipboard');
+  const handleCopyReferral = async () => {
+    await Clipboard.setStringAsync(referralCode);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handleOpenEditModal = () => {
+    setNewUsername(profile?.username || '');
+    setCurrentPassword('');
+    setNewPassword('');
+    setConfirmPassword('');
+    setPasswordError('');
+    setShowEditModal(true);
+  };
+
+  const handleSaveProfile = async () => {
+    setPasswordError('');
+    
+    if (!newUsername.trim()) {
+      Alert.alert('Error', 'Username cannot be empty');
+      return;
+    }
+
+    if (newUsername.trim().length < 3) {
+      Alert.alert('Error', 'Username must be at least 3 characters');
+      return;
+    }
+
+    if (newPassword) {
+      if (!currentPassword) {
+        setPasswordError('Enter current password');
+        return;
+      }
+      if (newPassword.length < 6) {
+        setPasswordError('New password must be at least 6 characters');
+        return;
+      }
+      if (newPassword !== confirmPassword) {
+        setPasswordError('Passwords do not match');
+        return;
+      }
+    }
+
+    setSaving(true);
+    
+    const profileSuccess = await updateProfile({ username: newUsername.trim() });
+    let passwordSuccess = true;
+    let passwordErrorMsg = '';
+    
+    if (newPassword && currentPassword) {
+      const result = await changePassword(currentPassword, newPassword);
+      passwordSuccess = result.success;
+      passwordErrorMsg = result.error || '';
+    }
+
+    setSaving(false);
+
+    if (profileSuccess && passwordSuccess) {
+      setShowEditModal(false);
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+      Alert.alert('Success', newPassword ? 'Profile and password updated!' : 'Profile updated!');
+    } else if (!profileSuccess) {
+      Alert.alert('Error', 'Failed to update profile');
+    } else {
+      setPasswordError(passwordErrorMsg);
+    }
   };
 
   const generalMenuItems = [
@@ -79,7 +157,7 @@ export default function SettingsScreen() {
       title: 'Account',
       description: 'Manage your profile',
       color: '#FBBF24',
-      onPress: () => {},
+      onPress: handleOpenEditModal,
     },
     {
       icon: Shield,
@@ -170,7 +248,8 @@ export default function SettingsScreen() {
                   <Text style={styles.profileEmailText}>{user?.email}</Text>
                 </View>
               </View>
-              <TouchableOpacity style={styles.editButton}>
+              <TouchableOpacity style={styles.editButton} onPress={handleOpenEditModal}>
+                <Edit3 color="#FBBF24" size={14} />
                 <Text style={styles.editButtonText}>Edit</Text>
               </TouchableOpacity>
             </View>
@@ -230,11 +309,21 @@ export default function SettingsScreen() {
               <View style={styles.referralCodeContainer}>
                 <Text style={styles.referralCodeLabel}>Your Referral Code</Text>
                 <View style={styles.referralCodeBox}>
-                  <Text style={styles.referralCode}>HERO{profile?.id?.slice(0, 6).toUpperCase() || 'XXXXXX'}</Text>
-                  <TouchableOpacity style={styles.copyButton} onPress={handleCopyReferral}>
-                    <Copy color="#FBBF24" size={16} />
+                  <Text style={styles.referralCode}>{referralCode}</Text>
+                  <TouchableOpacity 
+                    style={[styles.copyButton, copied && styles.copyButtonSuccess]} 
+                    onPress={handleCopyReferral}
+                  >
+                    {copied ? (
+                      <Check color="#22C55E" size={16} />
+                    ) : (
+                      <Copy color="#FBBF24" size={16} />
+                    )}
                   </TouchableOpacity>
                 </View>
+                {copied && (
+                  <Text style={styles.copiedText}>Copied to clipboard!</Text>
+                )}
               </View>
               <View style={styles.referralStats}>
                 <View style={styles.referralStatItem}>
@@ -403,6 +492,131 @@ export default function SettingsScreen() {
 
           <View style={styles.bottomSpacer} />
         </ScrollView>
+
+        {/* Edit Profile Modal */}
+        <Modal
+          visible={showEditModal}
+          transparent
+          animationType="fade"
+          onRequestClose={() => setShowEditModal(false)}
+        >
+          <View style={styles.modalOverlay}>
+            <ScrollView contentContainerStyle={styles.modalScrollContent}>
+              <View style={styles.modalContent}>
+                <TouchableOpacity
+                  style={styles.modalClose}
+                  onPress={() => setShowEditModal(false)}
+                >
+                  <X color="#94A3B8" size={24} />
+                </TouchableOpacity>
+
+                <View style={styles.modalIcon}>
+                  <User color="#FBBF24" size={32} />
+                </View>
+
+                <Text style={styles.modalTitle}>Edit Profile</Text>
+                <Text style={styles.modalSubtitle}>Update your profile settings</Text>
+
+                <View style={styles.inputContainer}>
+                  <Text style={styles.inputLabel}>Username</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={newUsername}
+                    onChangeText={setNewUsername}
+                    placeholder="Enter username"
+                    placeholderTextColor="#64748B"
+                    maxLength={20}
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                  />
+                  <Text style={styles.inputHint}>{newUsername.length}/20 characters</Text>
+                </View>
+
+                <View style={styles.divider} />
+
+                <Text style={styles.sectionLabel}>Change Password (Optional)</Text>
+
+                {passwordError ? <Text style={styles.errorHintTop}>{passwordError}</Text> : null}
+
+                <View style={styles.inputContainer}>
+                  <Text style={styles.inputLabel}>Current Password</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={currentPassword}
+                    onChangeText={setCurrentPassword}
+                    placeholder="Enter current password"
+                    placeholderTextColor="#64748B"
+                    secureTextEntry={!showPassword}
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                  />
+                </View>
+
+                <View style={styles.inputContainer}>
+                  <Text style={styles.inputLabel}>New Password</Text>
+                  <View style={styles.passwordInputContainer}>
+                    <TextInput
+                      style={styles.passwordInput}
+                      value={newPassword}
+                      onChangeText={setNewPassword}
+                      placeholder="Enter new password"
+                      placeholderTextColor="#64748B"
+                      secureTextEntry={!showPassword}
+                      autoCapitalize="none"
+                      autoCorrect={false}
+                    />
+                    <TouchableOpacity 
+                      style={styles.eyeButton}
+                      onPress={() => setShowPassword(!showPassword)}
+                    >
+                      <Text style={styles.eyeButtonText}>{showPassword ? 'Hide' : 'Show'}</Text>
+                    </TouchableOpacity>
+                  </View>
+                  {newPassword && newPassword.length > 0 && newPassword.length < 6 ? (
+                    <Text style={styles.errorHint}>Min 6 characters required</Text>
+                  ) : null}
+                </View>
+
+                <View style={styles.inputContainer}>
+                  <Text style={styles.inputLabel}>Confirm Password</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={confirmPassword}
+                    onChangeText={setConfirmPassword}
+                    placeholder="Confirm new password"
+                    placeholderTextColor="#64748B"
+                    secureTextEntry={!showPassword}
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                  />
+                  {newPassword && confirmPassword && newPassword !== confirmPassword ? (
+                    <Text style={styles.errorHint}>Passwords do not match</Text>
+                  ) : null}
+                </View>
+
+                <View style={styles.modalButtons}>
+                  <TouchableOpacity
+                    style={styles.cancelButton}
+                    onPress={() => setShowEditModal(false)}
+                  >
+                    <Text style={styles.cancelButtonText}>Cancel</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.saveButton, saving && styles.saveButtonDisabled]}
+                    onPress={handleSaveProfile}
+                    disabled={saving}
+                  >
+                    {saving ? (
+                      <ActivityIndicator color="#0F172A" size="small" />
+                    ) : (
+                      <Text style={styles.saveButtonText}>Save</Text>
+                    )}
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </ScrollView>
+          </View>
+        </Modal>
       </SafeAreaView>
       </View>
     </ImageBackground>
@@ -469,6 +683,9 @@ const styles = StyleSheet.create({
     color: '#94A3B8',
   },
   editButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
     backgroundColor: 'rgba(251, 191, 36, 0.15)',
     paddingHorizontal: 12,
     paddingVertical: 6,
@@ -628,6 +845,15 @@ const styles = StyleSheet.create({
   },
   copyButton: {
     padding: 4,
+  },
+  copyButtonSuccess: {
+    backgroundColor: 'rgba(34, 197, 94, 0.2)',
+    borderRadius: 4,
+  },
+  copiedText: {
+    fontSize: 10,
+    color: '#22C55E',
+    marginTop: 6,
   },
   referralStats: {
     flexDirection: 'row',
@@ -796,5 +1022,161 @@ const styles = StyleSheet.create({
   },
   bottomSpacer: {
     height: 24,
+  },
+  // Modal
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+  },
+  modalScrollContent: {
+    flexGrow: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  modalContent: {
+    backgroundColor: '#1E293B',
+    borderRadius: 20,
+    padding: 24,
+    width: '100%',
+    maxWidth: 340,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(100, 116, 139, 0.3)',
+  },
+  modalClose: {
+    position: 'absolute',
+    top: 12,
+    right: 12,
+    zIndex: 10,
+    padding: 6,
+  },
+  modalIcon: {
+    width: 64,
+    height: 64,
+    borderRadius: 20,
+    backgroundColor: 'rgba(251, 191, 36, 0.15)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: '#FFFFFF',
+    marginBottom: 6,
+  },
+  modalSubtitle: {
+    fontSize: 12,
+    color: '#94A3B8',
+    marginBottom: 24,
+  },
+  inputContainer: {
+    width: '100%',
+    marginBottom: 20,
+  },
+  inputLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#94A3B8',
+    marginBottom: 8,
+  },
+  input: {
+    backgroundColor: 'rgba(15, 23, 42, 0.5)',
+    borderRadius: 12,
+    padding: 14,
+    fontSize: 16,
+    color: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: 'rgba(100, 116, 139, 0.3)',
+  },
+  inputHint: {
+    fontSize: 10,
+    color: '#64748B',
+    marginTop: 6,
+    textAlign: 'right',
+  },
+  errorHint: {
+    fontSize: 10,
+    color: '#EF4444',
+    marginTop: 6,
+  },
+  errorHintTop: {
+    fontSize: 11,
+    color: '#EF4444',
+    marginBottom: 12,
+    textAlign: 'center',
+    backgroundColor: 'rgba(239, 68, 68, 0.1)',
+    padding: 8,
+    borderRadius: 8,
+    width: '100%',
+  },
+  divider: {
+    width: '100%',
+    height: 1,
+    backgroundColor: 'rgba(100, 116, 139, 0.2)',
+    marginBottom: 16,
+  },
+  sectionLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#FBBF24',
+    marginBottom: 12,
+    alignSelf: 'flex-start',
+  },
+  passwordInputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(15, 23, 42, 0.5)',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(100, 116, 139, 0.3)',
+  },
+  passwordInput: {
+    flex: 1,
+    padding: 14,
+    fontSize: 16,
+    color: '#FFFFFF',
+  },
+  eyeButton: {
+    paddingHorizontal: 14,
+    paddingVertical: 14,
+  },
+  eyeButtonText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#FBBF24',
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    gap: 12,
+    width: '100%',
+  },
+  cancelButton: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: 12,
+    backgroundColor: 'rgba(100, 116, 139, 0.2)',
+    alignItems: 'center',
+  },
+  cancelButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#94A3B8',
+  },
+  saveButton: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: 12,
+    backgroundColor: '#FBBF24',
+    alignItems: 'center',
+  },
+  saveButtonDisabled: {
+    opacity: 0.7,
+  },
+  saveButtonText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#0F172A',
   },
 });

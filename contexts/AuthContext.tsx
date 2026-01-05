@@ -10,6 +10,8 @@ interface AuthContextType {
   loading: boolean;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
+  updateProfile: (updates: Partial<Profile>) => Promise<boolean>;
+  changePassword: (currentPassword: string, newPassword: string) => Promise<{ success: boolean; error?: string }>;
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -19,6 +21,8 @@ const AuthContext = createContext<AuthContextType>({
   loading: true,
   signOut: async () => {},
   refreshProfile: async () => {},
+  updateProfile: async () => false,
+  changePassword: async () => ({ success: false }),
 });
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -76,8 +80,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setProfile(null);
   };
 
+  const updateProfile = async (updates: Partial<Profile>): Promise<boolean> => {
+    if (!user) return false;
+    const { error } = await supabase
+      .from('profiles')
+      .update(updates)
+      .eq('id', user.id);
+    if (error) return false;
+    await fetchProfile(user.id);
+    return true;
+  };
+
+  const changePassword = async (currentPassword: string, newPassword: string): Promise<{ success: boolean; error?: string }> => {
+    if (!user?.email) return { success: false, error: 'User not found' };
+    const { error: signInError } = await supabase.auth.signInWithPassword({
+      email: user.email,
+      password: currentPassword,
+    });
+    if (signInError) return { success: false, error: 'Current password is incorrect' };
+    const { error: updateError } = await supabase.auth.updateUser({ password: newPassword });
+    if (updateError) return { success: false, error: 'Failed to update password' };
+    return { success: true };
+  };
+
   return (
-    <AuthContext.Provider value={{ session, user, profile, loading, signOut, refreshProfile }}>
+    <AuthContext.Provider value={{ session, user, profile, loading, signOut, refreshProfile, updateProfile, changePassword }}>
       {children}
     </AuthContext.Provider>
   );
