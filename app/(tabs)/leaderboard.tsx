@@ -6,7 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
-import { Trophy, Medal, Crown, Coins, TrendingUp, Users, Clock, Gift, Zap, Target, ChevronRight, Lock, Calendar, Star } from 'lucide-react-native';
+import { Trophy, Medal, Crown, Coins, TrendingUp, Users, Zap, ChevronRight } from 'lucide-react-native';
 import { Profile } from '@/types/database';
 
 interface LeaderboardEntry extends Profile {
@@ -93,13 +93,6 @@ export default function LeaderboardScreen() {
     return 'All time rankings';
   };
 
-  const getRankIcon = (rank: number, size: number = 20) => {
-    if (rank === 1) return <Crown color="#FFD700" size={size} />;
-    if (rank === 2) return <Medal color="#C0C0C0" size={size} />;
-    if (rank === 3) return <Medal color="#CD7F32" size={size} />;
-    return <Trophy color="#64748B" size={size - 4} />;
-  };
-
   const getRankColor = (rank: number) => {
     if (rank === 1) return '#FFD700';
     if (rank === 2) return '#C0C0C0';
@@ -124,6 +117,7 @@ export default function LeaderboardScreen() {
   const top3 = leaderboard.slice(0, 3);
   const restOfLeaderboard = leaderboard.slice(3);
   const totalPlayers = leaderboard.length;
+  const totalSC = leaderboard.reduce((sum, entry) => sum + entry.supercash_balance, 0);
 
   if (loading) {
     return (
@@ -176,14 +170,14 @@ export default function LeaderboardScreen() {
               <Text style={styles.statLabelMini}>Your Rank</Text>
             </View>
             <View style={styles.statCardMini}>
-              <Gift color="#8B5CF6" size={16} />
-              <Text style={styles.statValueMini}>1K</Text>
-              <Text style={styles.statLabelMini}>Prize Pool</Text>
+              <Coins color="#8B5CF6" size={16} />
+              <Text style={styles.statValueMini}>{totalSC >= 1000 ? `${(totalSC/1000).toFixed(0)}K` : totalSC}</Text>
+              <Text style={styles.statLabelMini}>Total SC</Text>
             </View>
             <View style={styles.statCardMini}>
-              <Clock color="#3B82F6" size={16} />
-              <Text style={styles.statValueMini}>6d</Text>
-              <Text style={styles.statLabelMini}>Ends In</Text>
+              <Zap color="#3B82F6" size={16} />
+              <Text style={styles.statValueMini}>{top3[0]?.supercash_balance?.toLocaleString() || '-'}</Text>
+              <Text style={styles.statLabelMini}>Top Score</Text>
             </View>
           </View>
 
@@ -276,191 +270,100 @@ export default function LeaderboardScreen() {
                 </View>
               )}
 
-          {/* Your Rank Card */}
-          {userRank && profile && userRank > 3 && (
-            <View style={styles.userCard}>
-              <View style={styles.userCardLeft}>
-                <View style={styles.userRankBadge}>
-                  <Text style={styles.userRankText}>#{userRank}</Text>
-                </View>
-                <View style={styles.userInfo}>
-                  <Text style={styles.userCardUsername}>{profile.username || 'Anonymous'}</Text>
-                  <View style={styles.userCardBalance}>
-                    <Coins color="#FBBF24" size={14} />
-                    <Text style={styles.userCardBalanceText}>
-                      {profile.supercash_balance.toLocaleString()}
-                    </Text>
-                  </View>
-                </View>
-              </View>
-              <View style={styles.userCardRight}>
-                <TrendingUp color="#22C55E" size={16} />
-                <Text style={styles.userCardTrend}>+12</Text>
-              </View>
-            </View>
-          )}
-
-          {/* Season Rewards */}
-          <View style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Season Rewards</Text>
-              <View style={styles.comingSoonBadge}>
-                <Text style={styles.comingSoonText}>Season 1</Text>
-              </View>
-            </View>
-            <View style={styles.rewardsGrid}>
-              <View style={styles.rewardCard}>
-                <View style={[styles.rewardIcon, { backgroundColor: 'rgba(255, 215, 0, 0.15)' }]}>
-                  <Crown color="#FFD700" size={20} />
-                </View>
-                <Text style={styles.rewardRank}>1st</Text>
-                <Text style={styles.rewardPrize}>500 $HERO</Text>
-              </View>
-              <View style={styles.rewardCard}>
-                <View style={[styles.rewardIcon, { backgroundColor: 'rgba(192, 192, 192, 0.15)' }]}>
-                  <Medal color="#C0C0C0" size={20} />
-                </View>
-                <Text style={styles.rewardRank}>2nd</Text>
-                <Text style={styles.rewardPrize}>300 $HERO</Text>
-              </View>
-              <View style={styles.rewardCard}>
-                <View style={[styles.rewardIcon, { backgroundColor: 'rgba(205, 127, 50, 0.15)' }]}>
-                  <Medal color="#CD7F32" size={20} />
-                </View>
-                <Text style={styles.rewardRank}>3rd</Text>
-                <Text style={styles.rewardPrize}>150 $HERO</Text>
-              </View>
-              <View style={styles.rewardCard}>
-                <View style={[styles.rewardIcon, { backgroundColor: 'rgba(139, 92, 246, 0.15)' }]}>
-                  <Star color="#8B5CF6" size={20} />
-                </View>
-                <Text style={styles.rewardRank}>4-10</Text>
-                <Text style={styles.rewardPrize}>50 $HERO</Text>
-              </View>
-            </View>
-          </View>
-
-          {/* Leaderboard List */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Rankings</Text>
-          <View style={styles.leaderboardList}>
-              {restOfLeaderboard.map((entry) => {
-              const isCurrentUser = user && entry.id === user.id;
-              const rankColor = getRankColor(entry.rank);
-              const bgColor = getRankBgColor(entry.rank);
-              const borderColor = getRankBorderColor(entry.rank);
-
-              return (
-                <View
-                  key={entry.id}
-                  style={[
-                    styles.leaderboardCard,
-                    {
-                      backgroundColor: isCurrentUser ? 'rgba(251, 191, 36, 0.15)' : bgColor,
-                      borderColor: isCurrentUser ? 'rgba(251, 191, 36, 0.4)' : borderColor,
-                      borderWidth: isCurrentUser ? 2 : 1,
-                    },
-                  ]}
-                >
-                  <View style={styles.leaderboardLeft}>
-                    <View
-                      style={[
-                        styles.rankBadge,
-                        {
-                          backgroundColor: entry.rank <= 3 ? rankColor + '20' : 'rgba(51, 65, 85, 0.5)',
-                        },
-                      ]}
-                    >
-                      <Text
-                        style={[
-                          styles.rankText,
-                          { color: rankColor },
-                        ]}
-                      >
-                        #{entry.rank}
-                      </Text>
+              {/* Your Rank Card */}
+              {userRank && profile && userRank > 3 && (
+                <View style={styles.userCard}>
+                  <View style={styles.userCardLeft}>
+                    <View style={styles.userRankBadge}>
+                      <Text style={styles.userRankText}>#{userRank}</Text>
                     </View>
-                    <View style={styles.playerInfo}>
-                      <Text
-                        style={[
-                          styles.playerName,
-                          isCurrentUser && { color: '#FBBF24' }
-                        ]}
-                        numberOfLines={1}
-                      >
-                        {entry.username || 'Anonymous'}
-                      </Text>
-                      {isCurrentUser && (
-                        <Text style={styles.youBadge}>You</Text>
-                      )}
-                    </View>
-                  </View>
-                  <View style={styles.leaderboardRight}>
-                    <View style={styles.balanceContainer}>
-                        <Coins color="#FBBF24" size={12} />
-                      <Text style={styles.balanceText}>
-                        {entry.supercash_balance.toLocaleString()}
-                      </Text>
+                    <View style={styles.userInfo}>
+                      <Text style={styles.userCardUsername}>{profile.username || 'Anonymous'}</Text>
+                      <View style={styles.userCardBalance}>
+                        <Coins color="#FBBF24" size={14} />
+                        <Text style={styles.userCardBalanceText}>
+                          {profile.supercash_balance.toLocaleString()}
+                        </Text>
                       </View>
+                    </View>
+                  </View>
+                  <View style={styles.userCardRight}>
+                    <TrendingUp color="#22C55E" size={16} />
+                    <Text style={styles.userCardTrend}>You</Text>
                   </View>
                 </View>
-              );
-            })}
-            </View>
-          </View>
+              )}
+
+              {/* Leaderboard List */}
+              <View style={styles.section}>
+                <Text style={styles.sectionTitle}>Rankings</Text>
+                <View style={styles.leaderboardList}>
+                  {restOfLeaderboard.map((entry) => {
+                    const isCurrentUser = user && entry.id === user.id;
+                    const rankColor = getRankColor(entry.rank);
+                    const bgColor = getRankBgColor(entry.rank);
+                    const borderColor = getRankBorderColor(entry.rank);
+
+                    return (
+                      <View
+                        key={entry.id}
+                        style={[
+                          styles.leaderboardCard,
+                          {
+                            backgroundColor: isCurrentUser ? 'rgba(251, 191, 36, 0.15)' : bgColor,
+                            borderColor: isCurrentUser ? 'rgba(251, 191, 36, 0.4)' : borderColor,
+                            borderWidth: isCurrentUser ? 2 : 1,
+                          },
+                        ]}
+                      >
+                        <View style={styles.leaderboardLeft}>
+                          <View
+                            style={[
+                              styles.rankBadge,
+                              {
+                                backgroundColor: entry.rank <= 3 ? rankColor + '20' : 'rgba(51, 65, 85, 0.5)',
+                              },
+                            ]}
+                          >
+                            <Text
+                              style={[
+                                styles.rankText,
+                                { color: rankColor },
+                              ]}
+                            >
+                              #{entry.rank}
+                            </Text>
+                          </View>
+                          <View style={styles.playerInfo}>
+                            <Text
+                              style={[
+                                styles.playerName,
+                                isCurrentUser && { color: '#FBBF24' }
+                              ]}
+                              numberOfLines={1}
+                            >
+                              {entry.username || 'Anonymous'}
+                            </Text>
+                            {isCurrentUser && (
+                              <Text style={styles.youBadge}>You</Text>
+                            )}
+                          </View>
+                        </View>
+                        <View style={styles.leaderboardRight}>
+                          <View style={styles.balanceContainer}>
+                            <Coins color="#FBBF24" size={12} />
+                            <Text style={styles.balanceText}>
+                              {entry.supercash_balance.toLocaleString()}
+                            </Text>
+                          </View>
+                        </View>
+                      </View>
+                    );
+                  })}
+                </View>
+              </View>
             </>
           )}
-
-          {/* Upcoming Tournaments */}
-          <View style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Tournaments</Text>
-              <TouchableOpacity style={styles.seeAllButton}>
-                <Text style={styles.seeAllText}>View All</Text>
-                <ChevronRight color="#FBBF24" size={14} />
-              </TouchableOpacity>
-            </View>
-            <View style={styles.tournamentsGrid}>
-              <TouchableOpacity style={styles.tournamentCard}>
-                <LinearGradient
-                  colors={['rgba(251, 191, 36, 0.2)', 'rgba(251, 191, 36, 0.05)']}
-                  style={styles.tournamentGradient}
-                >
-                  <View style={styles.tournamentIcon}>
-                    <Zap color="#FBBF24" size={20} />
-                  </View>
-                  <Text style={styles.tournamentTitle}>Speed Race</Text>
-                  <Text style={styles.tournamentDesc}>Earn fastest in 24h</Text>
-                  <View style={styles.tournamentMeta}>
-                    <Calendar color="#94A3B8" size={10} />
-                    <Text style={styles.tournamentMetaText}>Starts in 2d</Text>
-                  </View>
-                  <View style={styles.lockedOverlay}>
-                    <Lock color="#64748B" size={14} />
-                  </View>
-                </LinearGradient>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.tournamentCard}>
-                <LinearGradient
-                  colors={['rgba(139, 92, 246, 0.2)', 'rgba(139, 92, 246, 0.05)']}
-                  style={styles.tournamentGradient}
-                >
-                  <View style={styles.tournamentIcon}>
-                    <Target color="#8B5CF6" size={20} />
-                  </View>
-                  <Text style={styles.tournamentTitle}>Hero Battle</Text>
-                  <Text style={styles.tournamentDesc}>PvP tournament</Text>
-                  <View style={styles.tournamentMeta}>
-                    <Calendar color="#94A3B8" size={10} />
-                    <Text style={styles.tournamentMetaText}>Starts in 5d</Text>
-                  </View>
-                  <View style={styles.lockedOverlay}>
-                    <Lock color="#64748B" size={14} />
-                  </View>
-                </LinearGradient>
-              </TouchableOpacity>
-            </View>
-          </View>
 
           {/* Compete Banner */}
           <TouchableOpacity style={styles.competeBanner}>
@@ -517,7 +420,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 12,
   },
-  // Stats Row
   statsRow: {
     flexDirection: 'row',
     gap: 8,
@@ -542,7 +444,6 @@ const styles = StyleSheet.create({
     fontSize: 9,
     color: '#94A3B8',
   },
-  // Filter Tabs
   filterTabs: {
     flexDirection: 'row',
     gap: 8,
@@ -550,7 +451,7 @@ const styles = StyleSheet.create({
   },
   filterTab: {
     flex: 1,
-    paddingVertical: 8,
+    paddingVertical: 10,
     backgroundColor: 'rgba(30, 41, 59, 0.6)',
     borderRadius: 10,
     alignItems: 'center',
@@ -569,7 +470,6 @@ const styles = StyleSheet.create({
   filterTabTextActive: {
     color: '#FBBF24',
   },
-  // Filter Info
   filterInfo: {
     marginBottom: 12,
   },
@@ -578,7 +478,6 @@ const styles = StyleSheet.create({
     color: '#94A3B8',
     textAlign: 'center',
   },
-  // Empty State
   emptyState: {
     backgroundColor: 'rgba(30, 41, 59, 0.6)',
     borderRadius: 16,
@@ -600,7 +499,6 @@ const styles = StyleSheet.create({
     color: '#94A3B8',
     textAlign: 'center',
   },
-  // Podium
   podiumContainer: {
     flexDirection: 'row',
     justifyContent: 'center',
@@ -691,7 +589,6 @@ const styles = StyleSheet.create({
     height: 32,
     backgroundColor: 'rgba(205, 127, 50, 0.3)',
   },
-  // User Card
   userCard: {
     backgroundColor: 'rgba(251, 191, 36, 0.1)',
     borderRadius: 12,
@@ -747,76 +644,15 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#22C55E',
   },
-  // Sections
   section: {
     marginBottom: 18,
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 10,
   },
   sectionTitle: {
     fontSize: 15,
     fontWeight: '700',
     color: '#FFFFFF',
+    marginBottom: 10,
   },
-  seeAllButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 2,
-  },
-  seeAllText: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: '#FBBF24',
-  },
-  comingSoonBadge: {
-    backgroundColor: 'rgba(139, 92, 246, 0.2)',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 6,
-  },
-  comingSoonText: {
-    fontSize: 10,
-    fontWeight: '600',
-    color: '#8B5CF6',
-  },
-  // Rewards Grid
-  rewardsGrid: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  rewardCard: {
-    flex: 1,
-    backgroundColor: 'rgba(30, 41, 59, 0.6)',
-    borderRadius: 10,
-    padding: 10,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(100, 116, 139, 0.2)',
-  },
-  rewardIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 6,
-  },
-  rewardRank: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: '#FFFFFF',
-  },
-  rewardPrize: {
-    fontSize: 9,
-    fontWeight: '600',
-    color: '#8B5CF6',
-    marginTop: 2,
-  },
-  // Leaderboard List
   leaderboardList: {
     gap: 8,
   },
@@ -884,59 +720,6 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#FBBF24',
   },
-  // Tournaments Grid
-  tournamentsGrid: {
-    flexDirection: 'row',
-    gap: 10,
-  },
-  tournamentCard: {
-    flex: 1,
-    borderRadius: 12,
-    overflow: 'hidden',
-  },
-  tournamentGradient: {
-    padding: 12,
-    borderWidth: 1,
-    borderColor: 'rgba(100, 116, 139, 0.2)',
-    borderRadius: 12,
-    position: 'relative',
-  },
-  tournamentIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  tournamentTitle: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#FFFFFF',
-    marginBottom: 2,
-  },
-  tournamentDesc: {
-    fontSize: 10,
-    color: '#94A3B8',
-  },
-  tournamentMeta: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    marginTop: 8,
-  },
-  tournamentMetaText: {
-    fontSize: 9,
-    color: '#94A3B8',
-  },
-  lockedOverlay: {
-    position: 'absolute',
-    top: 10,
-    right: 10,
-    opacity: 0.5,
-  },
-  // Compete Banner
   competeBanner: {
     borderRadius: 12,
     overflow: 'hidden',

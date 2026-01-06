@@ -4,7 +4,6 @@ import * as Clipboard from 'expo-clipboard';
 
 const { width, height } = Dimensions.get('window');
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
 import { useGame } from '@/contexts/GameContext';
@@ -17,15 +16,12 @@ import {
   ChevronRight,
   Zap,
   Info,
-  Wallet,
   Bell,
   Globe,
-  Link2,
   Gift,
   Copy,
   Twitter,
   MessageCircle,
-  Lock,
   Coins,
   TrendingUp,
   Users,
@@ -161,31 +157,6 @@ export default function SettingsScreen() {
     },
   ];
 
-  const web3MenuItems = [
-    {
-      icon: Wallet,
-      title: 'Connect Wallet',
-      description: 'Link your Web3 wallet',
-      color: '#8B5CF6',
-      badge: 'New',
-      onPress: () => {},
-    },
-    {
-      icon: Lock,
-      title: 'Staking Settings',
-      description: 'Auto-stake preferences',
-      color: '#F59E0B',
-      onPress: () => {},
-    },
-    {
-      icon: Link2,
-      title: 'NFT Settings',
-      description: 'Marketplace preferences',
-      color: '#EC4899',
-      onPress: () => {},
-    },
-  ];
-
   const supportMenuItems = [
     {
       icon: HelpCircle,
@@ -260,25 +231,6 @@ export default function SettingsScreen() {
             </View>
           </View>
 
-          {/* Wallet Section */}
-          <TouchableOpacity style={styles.walletBanner}>
-            <LinearGradient
-              colors={['rgba(139, 92, 246, 0.3)', 'rgba(59, 130, 246, 0.3)']}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={styles.walletBannerGradient}
-            >
-              <View style={styles.walletBannerIcon}>
-                <Wallet color="#FFFFFF" size={22} />
-              </View>
-              <View style={styles.walletBannerText}>
-                <Text style={styles.walletBannerTitle}>Connect Wallet</Text>
-                <Text style={styles.walletBannerDesc}>Enable Web3 features & earn $HERO</Text>
-              </View>
-              <ChevronRight color="#FFFFFF" size={18} />
-            </LinearGradient>
-          </TouchableOpacity>
-
           {/* Referral Section */}
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Referral Program</Text>
@@ -289,7 +241,7 @@ export default function SettingsScreen() {
                 </View>
                 <View style={styles.referralInfo}>
                   <Text style={styles.referralTitle}>Invite Friends & Earn</Text>
-                  <Text style={styles.referralDesc}>Get 100 $HERO for each friend</Text>
+                  <Text style={styles.referralDesc}>Get 100 SC for each friend</Text>
                 </View>
               </View>
               <View style={styles.referralCodeContainer}>
@@ -318,7 +270,7 @@ export default function SettingsScreen() {
                 </View>
                 <View style={styles.referralStatItem}>
                   <Text style={styles.referralStatValue}>0</Text>
-                  <Text style={styles.referralStatLabel}>$HERO Earned</Text>
+                  <Text style={styles.referralStatLabel}>SC Earned</Text>
                 </View>
               </View>
             </View>
@@ -383,39 +335,6 @@ export default function SettingsScreen() {
                     <Text style={styles.menuTitle}>{item.title}</Text>
                     <Text style={styles.menuDescription}>{item.description}</Text>
                   </View>
-                  <ChevronRight color="#64748B" size={18} />
-                </TouchableOpacity>
-              ))}
-            </View>
-          </View>
-
-          {/* Web3 Settings */}
-          <View style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Web3</Text>
-              <View style={styles.comingSoonBadge}>
-                <Text style={styles.comingSoonText}>Beta</Text>
-              </View>
-            </View>
-            <View style={styles.menuSection}>
-              {web3MenuItems.map((item, index) => (
-                <TouchableOpacity
-                  key={index}
-                  style={[styles.menuItem, index === web3MenuItems.length - 1 && styles.menuItemLast]}
-                  onPress={item.onPress}
-                >
-                  <View style={[styles.menuIconContainer, { backgroundColor: `${item.color}15` }]}>
-                    <item.icon color={item.color} size={18} />
-                  </View>
-                  <View style={styles.menuContent}>
-                    <Text style={styles.menuTitle}>{item.title}</Text>
-                    <Text style={styles.menuDescription}>{item.description}</Text>
-                  </View>
-                  {item.badge && (
-                    <View style={styles.newBadge}>
-                      <Text style={styles.newBadgeText}>{item.badge}</Text>
-                    </View>
-                  )}
                   <ChevronRight color="#64748B" size={18} />
                 </TouchableOpacity>
               ))}
@@ -611,12 +530,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 12,
   },
-  // Profile Card
   profileCard: {
     backgroundColor: 'rgba(30, 41, 59, 0.8)',
     borderRadius: 14,
     padding: 14,
-    marginBottom: 14,
+    marginBottom: 18,
     borderWidth: 1,
     borderColor: 'rgba(100, 116, 139, 0.2)',
   },
@@ -690,51 +608,8 @@ const styles = StyleSheet.create({
     width: 1,
     backgroundColor: 'rgba(100, 116, 139, 0.3)',
   },
-  // Wallet Banner
-  walletBanner: {
-    borderRadius: 12,
-    overflow: 'hidden',
-    marginBottom: 18,
-  },
-  walletBannerGradient: {
-    padding: 14,
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(139, 92, 246, 0.3)',
-    borderRadius: 12,
-  },
-  walletBannerIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 10,
-    backgroundColor: 'rgba(255, 255, 255, 0.15)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
-  },
-  walletBannerText: {
-    flex: 1,
-  },
-  walletBannerTitle: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#FFFFFF',
-    marginBottom: 2,
-  },
-  walletBannerDesc: {
-    fontSize: 10,
-    color: 'rgba(255, 255, 255, 0.7)',
-  },
-  // Sections
   section: {
     marginBottom: 18,
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 10,
   },
   sectionTitle: {
     fontSize: 14,
@@ -742,19 +617,6 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     marginBottom: 10,
   },
-  comingSoonBadge: {
-    backgroundColor: 'rgba(139, 92, 246, 0.2)',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 6,
-    marginBottom: 10,
-  },
-  comingSoonText: {
-    fontSize: 9,
-    fontWeight: '600',
-    color: '#8B5CF6',
-  },
-  // Referral Card
   referralCard: {
     backgroundColor: 'rgba(30, 41, 59, 0.6)',
     borderRadius: 12,
@@ -845,7 +707,6 @@ const styles = StyleSheet.create({
     fontSize: 9,
     color: '#94A3B8',
   },
-  // Notifications
   notificationCard: {
     backgroundColor: 'rgba(30, 41, 59, 0.6)',
     borderRadius: 12,
@@ -885,7 +746,6 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(100, 116, 139, 0.15)',
     marginHorizontal: 12,
   },
-  // Menu Section
   menuSection: {
     backgroundColor: 'rgba(30, 41, 59, 0.6)',
     borderRadius: 12,
@@ -924,19 +784,6 @@ const styles = StyleSheet.create({
     fontSize: 10,
     color: '#94A3B8',
   },
-  newBadge: {
-    backgroundColor: 'rgba(34, 197, 94, 0.2)',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 4,
-    marginRight: 8,
-  },
-  newBadgeText: {
-    fontSize: 9,
-    fontWeight: '600',
-    color: '#22C55E',
-  },
-  // Social Grid
   socialGrid: {
     flexDirection: 'row',
     gap: 10,
@@ -958,7 +805,6 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#FFFFFF',
   },
-  // Sign Out
   signOutButton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -976,7 +822,6 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#EF4444',
   },
-  // Version
   versionContainer: {
     alignItems: 'center',
     marginBottom: 8,
@@ -993,7 +838,6 @@ const styles = StyleSheet.create({
   bottomSpacer: {
     height: 24,
   },
-  // Modal
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.8)',

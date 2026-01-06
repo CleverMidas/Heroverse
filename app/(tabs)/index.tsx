@@ -6,12 +6,12 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
 import { useGame } from '@/contexts/GameContext';
-import { Zap, TrendingUp, Clock, Coins, ChevronRight, Sparkles, Wallet, ArrowUpRight, ArrowDownLeft, Gift, Target, Trophy, Shield, Globe, Lock } from 'lucide-react-native';
+import { Zap, TrendingUp, Clock, Coins, ChevronRight, Sparkles, Gift, Target } from 'lucide-react-native';
 import { getHeroImageSource } from '@/lib/heroImages';
 
 export default function HomeScreen() {
   const router = useRouter();
-  const { profile, user } = useAuth();
+  const { profile } = useAuth();
   const { userHeroes, pendingSupercash, collectSupercash } = useGame();
 
   const activeHeroes = userHeroes.filter(h => h.is_active);
@@ -34,9 +34,6 @@ export default function HomeScreen() {
     return num.toLocaleString();
   };
 
-  // Mock data for future features
-  const heroVerseTokenBalance = 0;
-  const heroVerseTokenPrice = 0.0042;
   const dailyQuestProgress = 2;
   const dailyQuestTotal = 5;
 
@@ -49,82 +46,34 @@ export default function HomeScreen() {
       <View style={styles.overlay}>
       <SafeAreaView style={styles.safeArea}>
         <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-          {/* Balance Cards Row */}
-          <View style={styles.balanceRow}>
-            {/* SuperCash Balance */}
-            <View style={styles.balanceCardSmall}>
-              <LinearGradient
-                colors={['#FBBF24', '#F59E0B']}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={styles.balanceGradientSmall}
-              >
-                <View style={styles.balanceHeaderSmall}>
-                  <View style={styles.balanceIconContainerSmall}>
-                    <Coins color="#0F172A" size={18} />
-                  </View>
-                  <Text style={styles.balanceLabelSmall}>SuperCash</Text>
+          {/* SuperCash Balance Card */}
+          <View style={styles.balanceCard}>
+            <LinearGradient
+              colors={['#FBBF24', '#F59E0B']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.balanceGradient}
+            >
+              <View style={styles.balanceHeader}>
+                <View style={styles.balanceIconContainer}>
+                  <Coins color="#0F172A" size={24} />
                 </View>
-                <Text style={styles.balanceAmountSmall}>
-                  {formatNumber(profile?.supercash_balance || 0)}
-                </Text>
-                <View style={styles.balanceFooterSmall}>
-                  <TrendingUp color="#0F172A" size={12} />
-                  <Text style={styles.statTextSmall}>{formatNumber(totalEarningRate)}/hr</Text>
+                <Text style={styles.balanceLabel}>SuperCash Balance</Text>
+              </View>
+              <Text style={styles.balanceAmount}>
+                {formatNumber(profile?.supercash_balance || 0)}
+              </Text>
+              <View style={styles.balanceFooter}>
+                <View style={styles.balanceStat}>
+                  <TrendingUp color="#0F172A" size={14} />
+                  <Text style={styles.balanceStatText}>{formatNumber(totalEarningRate)}/hr</Text>
                 </View>
-              </LinearGradient>
-            </View>
-
-            {/* HeroVerse Token Balance */}
-            <View style={styles.balanceCardSmall}>
-              <LinearGradient
-                colors={['#8B5CF6', '#7C3AED']}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={styles.balanceGradientSmall}
-              >
-                <View style={styles.balanceHeaderSmall}>
-                  <View style={styles.balanceIconContainerSmall}>
-                    <Wallet color="#FFFFFF" size={18} />
-                  </View>
-                  <Text style={[styles.balanceLabelSmall, { color: '#FFFFFF' }]}>$HERO</Text>
+                <View style={styles.balanceStat}>
+                  <Zap color="#0F172A" size={14} />
+                  <Text style={styles.balanceStatText}>{activeHeroes.length} Active</Text>
                 </View>
-                <Text style={[styles.balanceAmountSmall, { color: '#FFFFFF' }]}>
-                  {formatNumber(heroVerseTokenBalance)}
-                </Text>
-                <View style={styles.balanceFooterSmall}>
-                  <Text style={[styles.statTextSmall, { color: 'rgba(255,255,255,0.8)' }]}>≈ ${(heroVerseTokenBalance * heroVerseTokenPrice).toFixed(2)}</Text>
-                </View>
-              </LinearGradient>
-            </View>
-          </View>
-
-          {/* Quick Actions */}
-          <View style={styles.quickActions}>
-            <TouchableOpacity style={styles.actionButton}>
-              <View style={[styles.actionIcon, { backgroundColor: 'rgba(34, 197, 94, 0.15)' }]}>
-                <ArrowDownLeft color="#22C55E" size={20} />
               </View>
-              <Text style={styles.actionText}>Deposit</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.actionButton}>
-              <View style={[styles.actionIcon, { backgroundColor: 'rgba(59, 130, 246, 0.15)' }]}>
-                <ArrowUpRight color="#3B82F6" size={20} />
-              </View>
-              <Text style={styles.actionText}>Withdraw</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.actionButton}>
-              <View style={[styles.actionIcon, { backgroundColor: 'rgba(251, 191, 36, 0.15)' }]}>
-                <Coins color="#FBBF24" size={20} />
-              </View>
-              <Text style={styles.actionText}>Swap</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.actionButton}>
-              <View style={[styles.actionIcon, { backgroundColor: 'rgba(168, 85, 247, 0.15)' }]}>
-                <Lock color="#A855F7" size={20} />
-              </View>
-              <Text style={styles.actionText}>Stake</Text>
-            </TouchableOpacity>
+            </LinearGradient>
           </View>
 
           {pendingSupercash > 0 && (
@@ -198,7 +147,7 @@ export default function HomeScreen() {
                 </View>
                 <View style={styles.questItem}>
                   <View style={styles.questCheck} />
-                  <Text style={styles.questItemText}>Win 3 Battles</Text>
+                  <Text style={styles.questItemText}>Activate 3 Heroes</Text>
                   <Text style={styles.questItemReward}>+30 SC</Text>
                 </View>
               </View>
@@ -284,7 +233,7 @@ export default function HomeScreen() {
             )}
           </View>
 
-          {/* Stats Grid - Compact */}
+          {/* Stats Grid */}
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Quick Stats</Text>
             <View style={styles.statsGridCompact}>
@@ -294,12 +243,12 @@ export default function HomeScreen() {
                 <Text style={styles.statCardLabelCompact}>SC/hr</Text>
               </View>
               <View style={styles.statCardCompact}>
-                <Users color="#22C55E" size={18} />
+                <Zap color="#22C55E" size={18} />
                 <Text style={styles.statCardValueCompact}>{userHeroes.length}</Text>
                 <Text style={styles.statCardLabelCompact}>Heroes</Text>
               </View>
               <View style={styles.statCardCompact}>
-                <Zap color="#3B82F6" size={18} />
+                <TrendingUp color="#3B82F6" size={18} />
                 <Text style={styles.statCardValueCompact}>{activeHeroes.length}</Text>
                 <Text style={styles.statCardLabelCompact}>Active</Text>
               </View>
@@ -311,109 +260,12 @@ export default function HomeScreen() {
             </View>
           </View>
 
-          {/* Web3 Features Preview */}
-          <View style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>HeroVerse Ecosystem</Text>
-              <View style={styles.comingSoonBadge}>
-                <Text style={styles.comingSoonText}>Coming Soon</Text>
-              </View>
-            </View>
-            <View style={styles.web3Grid}>
-              <TouchableOpacity style={styles.web3Card}>
-                <LinearGradient
-                  colors={['rgba(139, 92, 246, 0.2)', 'rgba(139, 92, 246, 0.05)']}
-                  style={styles.web3CardGradient}
-                >
-                  <View style={styles.web3IconContainer}>
-                    <Globe color="#8B5CF6" size={24} />
-                  </View>
-                  <Text style={styles.web3CardTitle}>NFT Market</Text>
-                  <Text style={styles.web3CardDesc}>Trade Hero NFTs</Text>
-                  <View style={styles.lockedOverlay}>
-                    <Lock color="#64748B" size={16} />
-                  </View>
-                </LinearGradient>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.web3Card}>
-                <LinearGradient
-                  colors={['rgba(34, 197, 94, 0.2)', 'rgba(34, 197, 94, 0.05)']}
-                  style={styles.web3CardGradient}
-                >
-                  <View style={styles.web3IconContainer}>
-                    <Shield color="#22C55E" size={24} />
-                  </View>
-                  <Text style={styles.web3CardTitle}>Staking</Text>
-                  <Text style={styles.web3CardDesc}>Earn $HERO</Text>
-                  <View style={styles.lockedOverlay}>
-                    <Lock color="#64748B" size={16} />
-                  </View>
-                </LinearGradient>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.web3Card}>
-                <LinearGradient
-                  colors={['rgba(251, 191, 36, 0.2)', 'rgba(251, 191, 36, 0.05)']}
-                  style={styles.web3CardGradient}
-                >
-                  <View style={styles.web3IconContainer}>
-                    <Trophy color="#FBBF24" size={24} />
-                  </View>
-                  <Text style={styles.web3CardTitle}>Tournaments</Text>
-                  <Text style={styles.web3CardDesc}>Compete & Win</Text>
-                  <View style={styles.lockedOverlay}>
-                    <Lock color="#64748B" size={16} />
-                  </View>
-                </LinearGradient>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.web3Card}>
-                <LinearGradient
-                  colors={['rgba(59, 130, 246, 0.2)', 'rgba(59, 130, 246, 0.05)']}
-                  style={styles.web3CardGradient}
-                >
-                  <View style={styles.web3IconContainer}>
-                    <Sparkles color="#3B82F6" size={24} />
-                  </View>
-                  <Text style={styles.web3CardTitle}>Governance</Text>
-                  <Text style={styles.web3CardDesc}>Vote & Decide</Text>
-                  <View style={styles.lockedOverlay}>
-                    <Lock color="#64748B" size={16} />
-                  </View>
-                </LinearGradient>
-              </TouchableOpacity>
-            </View>
-          </View>
-
-          {/* Token Info Banner */}
-          <TouchableOpacity style={styles.tokenBanner}>
-            <LinearGradient
-              colors={['rgba(139, 92, 246, 0.3)', 'rgba(59, 130, 246, 0.3)']}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={styles.tokenBannerGradient}
-            >
-              <View style={styles.tokenBannerContent}>
-                <View style={styles.tokenBannerIcon}>
-                  <Text style={styles.tokenBannerEmoji}>🚀</Text>
-                </View>
-                <View style={styles.tokenBannerText}>
-                  <Text style={styles.tokenBannerTitle}>$HERO Token Launch</Text>
-                  <Text style={styles.tokenBannerDesc}>Join the whitelist for exclusive benefits</Text>
-                </View>
-              </View>
-              <ChevronRight color="#FFFFFF" size={20} />
-            </LinearGradient>
-          </TouchableOpacity>
-
           <View style={styles.bottomSpacer} />
         </ScrollView>
       </SafeAreaView>
       </View>
     </ImageBackground>
   );
-}
-
-function Users(props: any) {
-  return <Zap {...props} />;
 }
 
 const styles = StyleSheet.create({
@@ -433,80 +285,54 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: 16,
   },
-  // Balance Cards Row
-  balanceRow: {
-    flexDirection: 'row',
-    gap: 12,
+  // Balance Card
+  balanceCard: {
+    borderRadius: 20,
+    overflow: 'hidden',
     marginTop: 12,
     marginBottom: 16,
   },
-  balanceCardSmall: {
-    flex: 1,
-    borderRadius: 16,
-    overflow: 'hidden',
+  balanceGradient: {
+    padding: 20,
   },
-  balanceGradientSmall: {
-    padding: 16,
-  },
-  balanceHeaderSmall: {
+  balanceHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: 12,
   },
-  balanceIconContainerSmall: {
-    width: 32,
-    height: 32,
-    borderRadius: 10,
+  balanceIconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
     backgroundColor: 'rgba(15, 23, 42, 0.2)',
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 8,
+    marginRight: 10,
   },
-  balanceLabelSmall: {
-    fontSize: 12,
+  balanceLabel: {
+    fontSize: 14,
     fontWeight: '600',
     color: '#0F172A',
   },
-  balanceAmountSmall: {
-    fontSize: 28,
+  balanceAmount: {
+    fontSize: 40,
     fontWeight: '800',
     color: '#0F172A',
-    marginBottom: 4,
+    marginBottom: 8,
   },
-  balanceFooterSmall: {
+  balanceFooter: {
+    flexDirection: 'row',
+    gap: 16,
+  },
+  balanceStat: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
   },
-  statTextSmall: {
-    fontSize: 11,
+  balanceStatText: {
+    fontSize: 12,
     fontWeight: '600',
     color: '#0F172A',
-  },
-  // Quick Actions
-  quickActions: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 16,
-    paddingHorizontal: 8,
-  },
-  actionButton: {
-    alignItems: 'center',
-    gap: 6,
-  },
-  actionIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 14,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(100, 116, 139, 0.2)',
-  },
-  actionText: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: '#94A3B8',
   },
   // Collect Card
   collectCard: {
@@ -789,104 +615,6 @@ const styles = StyleSheet.create({
   statCardLabelCompact: {
     fontSize: 10,
     color: '#94A3B8',
-  },
-  // Web3 Grid
-  web3Grid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 10,
-  },
-  web3Card: {
-    width: (width - 42) / 2,
-    borderRadius: 12,
-    overflow: 'hidden',
-  },
-  web3CardGradient: {
-    padding: 14,
-    borderWidth: 1,
-    borderColor: 'rgba(100, 116, 139, 0.2)',
-    borderRadius: 12,
-    position: 'relative',
-  },
-  web3IconContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: 10,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 10,
-  },
-  web3CardTitle: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#FFFFFF',
-    marginBottom: 2,
-  },
-  web3CardDesc: {
-    fontSize: 11,
-    color: '#94A3B8',
-  },
-  lockedOverlay: {
-    position: 'absolute',
-    top: 14,
-    right: 14,
-    opacity: 0.5,
-  },
-  comingSoonBadge: {
-    backgroundColor: 'rgba(139, 92, 246, 0.2)',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 6,
-  },
-  comingSoonText: {
-    fontSize: 10,
-    fontWeight: '600',
-    color: '#8B5CF6',
-  },
-  // Token Banner
-  tokenBanner: {
-    borderRadius: 14,
-    overflow: 'hidden',
-    marginBottom: 8,
-  },
-  tokenBannerGradient: {
-    padding: 14,
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(139, 92, 246, 0.3)',
-    borderRadius: 14,
-  },
-  tokenBannerContent: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  tokenBannerIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 10,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  tokenBannerEmoji: {
-    fontSize: 20,
-  },
-  tokenBannerText: {
-    flex: 1,
-  },
-  tokenBannerTitle: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#FFFFFF',
-    marginBottom: 2,
-  },
-  tokenBannerDesc: {
-    fontSize: 11,
-    color: 'rgba(255, 255, 255, 0.7)',
   },
   bottomSpacer: {
     height: 24,

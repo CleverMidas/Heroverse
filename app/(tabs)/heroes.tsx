@@ -18,22 +18,20 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useAuth } from '@/contexts/AuthContext';
 import { useGame } from '@/contexts/GameContext';
 import { UserHeroWithDetails } from '@/types/database';
-import { Zap, Coins, Gift, X, Sparkles, Check, HelpCircle, Eye, ShoppingCart, Layers, Flame, Star, Lock, ArrowUpRight, Swords, Shield, TrendingUp } from 'lucide-react-native';
+import { Zap, Coins, Gift, X, Sparkles, Check, HelpCircle, Eye, Layers, Flame } from 'lucide-react-native';
 import { getHeroImageSource } from '@/lib/heroImages';
 
-type FilterTab = 'all' | 'active' | 'inactive' | 'nft';
+type FilterTab = 'all' | 'active' | 'inactive';
 
 export default function HeroesScreen() {
   const { profile } = useAuth();
-  const { userHeroes, allHeroes, claimFreeHero, activateHero, deactivateHero, revealHero, purchaseHero, loading, error } = useGame();
+  const { userHeroes, allHeroes, claimFreeHero, activateHero, deactivateHero, revealHero, loading, error } = useGame();
   const [claiming, setClaiming] = useState(false);
   const [activating, setActivating] = useState<string | null>(null);
   const [deactivating, setDeactivating] = useState<string | null>(null);
   const [revealing, setRevealing] = useState<string | null>(null);
   const [selectedHero, setSelectedHero] = useState<UserHeroWithDetails | null>(null);
   const [showClaimModal, setShowClaimModal] = useState(false);
-  const [showMarketplace, setShowMarketplace] = useState(false);
-  const [purchasing, setPurchasing] = useState<string | null>(null);
   const [activeFilter, setActiveFilter] = useState<FilterTab>('all');
 
   const starterHero = allHeroes.find(h => h.is_starter);
@@ -42,12 +40,12 @@ export default function HeroesScreen() {
   const activeHeroes = userHeroes.filter(h => h.is_active);
   const inactiveHeroes = userHeroes.filter(h => !h.is_active);
   const totalPower = activeHeroes.reduce((sum, h) => sum + h.heroes.hero_rarities.supercash_per_hour * 10, 0);
+  const totalEarningRate = activeHeroes.reduce((sum, h) => sum + h.heroes.hero_rarities.supercash_per_hour, 0);
 
   const filteredHeroes = userHeroes.filter(hero => {
     switch (activeFilter) {
       case 'active': return hero.is_active;
       case 'inactive': return !hero.is_active;
-      case 'nft': return false; // Future NFT heroes
       default: return true;
     }
   });
@@ -84,21 +82,6 @@ export default function HeroesScreen() {
       if (updated) setSelectedHero(updated);
     }
   };
-
-  const getHeroPrice = (rarity: { tier: number; supercash_per_hour: number }): number => {
-    return rarity.supercash_per_hour * 100;
-  };
-
-  const handlePurchaseHero = async (heroId: string, price: number) => {
-    setPurchasing(heroId);
-    const result = await purchaseHero(heroId, price);
-    setPurchasing(null);
-    if (!result.success && result.error) {
-      alert(result.error);
-    }
-  };
-
-  const marketplaceHeroes = allHeroes.filter(h => !h.is_starter);
 
   const formatTimeActive = (activatedAt: string): string => {
     const activated = new Date(activatedAt);
@@ -169,10 +152,10 @@ export default function HeroesScreen() {
             </View>
             <View style={styles.statCardMini}>
               <View style={[styles.statIconMini, { backgroundColor: 'rgba(59, 130, 246, 0.15)' }]}>
-                <Star color="#3B82F6" size={16} />
+                <Coins color="#3B82F6" size={16} />
               </View>
-              <Text style={styles.statValueMini}>0</Text>
-              <Text style={styles.statLabelMini}>NFTs</Text>
+              <Text style={styles.statValueMini}>{totalEarningRate}</Text>
+              <Text style={styles.statLabelMini}>SC/hr</Text>
             </View>
           </View>
 
@@ -236,15 +219,6 @@ export default function HeroesScreen() {
                 Idle ({inactiveHeroes.length})
               </Text>
             </TouchableOpacity>
-            <TouchableOpacity 
-              style={[styles.filterTab, activeFilter === 'nft' && styles.filterTabActive]}
-              onPress={() => setActiveFilter('nft')}
-            >
-              <Lock color={activeFilter === 'nft' ? '#FBBF24' : '#64748B'} size={12} />
-              <Text style={[styles.filterTabText, activeFilter === 'nft' && styles.filterTabTextActive]}>
-                NFT
-              </Text>
-            </TouchableOpacity>
           </View>
 
           {filteredHeroes.length === 0 && !canClaimFreeHero ? (
@@ -252,13 +226,9 @@ export default function HeroesScreen() {
               <View style={styles.emptyIcon}>
                 <Zap color="#64748B" size={40} />
               </View>
-              <Text style={styles.emptyTitle}>
-                {activeFilter === 'nft' ? 'No NFT Heroes Yet' : 'No Heroes Found'}
-              </Text>
+              <Text style={styles.emptyTitle}>No Heroes Found</Text>
               <Text style={styles.emptyText}>
-                {activeFilter === 'nft' 
-                  ? 'NFT heroes will be available when you mint or purchase from the marketplace'
-                  : 'Try changing the filter or acquire more heroes!'}
+                Claim your free hero to start earning SuperCash!
               </Text>
             </View>
           ) : (
@@ -336,102 +306,10 @@ export default function HeroesScreen() {
             </View>
           )}
 
-          {/* Quick Actions */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Hero Actions</Text>
-            <View style={styles.actionGrid}>
-              <TouchableOpacity style={styles.actionCard} onPress={() => setShowMarketplace(true)}>
-                <LinearGradient
-                  colors={['rgba(251, 191, 36, 0.2)', 'rgba(251, 191, 36, 0.05)']}
-                  style={styles.actionCardGradient}
-                >
-                  <View style={styles.actionCardIcon}>
-                    <ShoppingCart color="#FBBF24" size={22} />
-                  </View>
-                  <Text style={styles.actionCardTitle}>Marketplace</Text>
-                  <Text style={styles.actionCardDesc}>Buy & Sell Heroes</Text>
-                  <View style={[styles.actionCardBadge, { backgroundColor: 'rgba(34, 197, 94, 0.2)' }]}>
-                    <Text style={[styles.actionCardBadgeText, { color: '#22C55E' }]}>Open</Text>
-                  </View>
-                </LinearGradient>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.actionCard}>
-                <LinearGradient
-                  colors={['rgba(139, 92, 246, 0.2)', 'rgba(139, 92, 246, 0.05)']}
-                  style={styles.actionCardGradient}
-                >
-                  <View style={styles.actionCardIcon}>
-                    <Layers color="#8B5CF6" size={22} />
-                  </View>
-                  <Text style={styles.actionCardTitle}>Fusion</Text>
-                  <Text style={styles.actionCardDesc}>Combine Heroes</Text>
-                  <View style={styles.actionCardBadge}>
-                    <Text style={styles.actionCardBadgeText}>Soon</Text>
-                  </View>
-                </LinearGradient>
-              </TouchableOpacity>
-            </View>
-          </View>
-
-          {/* Hero Upgrade Section */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Enhance Your Heroes</Text>
-            <View style={styles.upgradeGrid}>
-              <TouchableOpacity style={styles.upgradeCard}>
-                <View style={[styles.upgradeIcon, { backgroundColor: 'rgba(34, 197, 94, 0.15)' }]}>
-                  <TrendingUp color="#22C55E" size={20} />
-                </View>
-                <View style={styles.upgradeInfo}>
-                  <Text style={styles.upgradeTitle}>Level Up</Text>
-                  <Text style={styles.upgradeDesc}>Increase earning rate</Text>
-                </View>
-                <Lock color="#64748B" size={16} />
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.upgradeCard}>
-                <View style={[styles.upgradeIcon, { backgroundColor: 'rgba(59, 130, 246, 0.15)' }]}>
-                  <Shield color="#3B82F6" size={20} />
-                </View>
-                <View style={styles.upgradeInfo}>
-                  <Text style={styles.upgradeTitle}>Equip Gear</Text>
-                  <Text style={styles.upgradeDesc}>Boost hero stats</Text>
-                </View>
-                <Lock color="#64748B" size={16} />
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.upgradeCard}>
-                <View style={[styles.upgradeIcon, { backgroundColor: 'rgba(239, 68, 68, 0.15)' }]}>
-                  <Swords color="#EF4444" size={20} />
-                </View>
-                <View style={styles.upgradeInfo}>
-                  <Text style={styles.upgradeTitle}>Battle Arena</Text>
-                  <Text style={styles.upgradeDesc}>PvP combat</Text>
-                </View>
-                <Lock color="#64748B" size={16} />
-              </TouchableOpacity>
-            </View>
-          </View>
-
-          {/* Mint NFT Banner */}
-          <TouchableOpacity style={styles.mintBanner}>
-            <LinearGradient
-              colors={['rgba(139, 92, 246, 0.3)', 'rgba(59, 130, 246, 0.3)']}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={styles.mintBannerGradient}
-            >
-              <View style={styles.mintBannerIcon}>
-                <Sparkles color="#FFFFFF" size={24} />
-              </View>
-              <View style={styles.mintBannerText}>
-                <Text style={styles.mintBannerTitle}>Mint Hero NFT</Text>
-                <Text style={styles.mintBannerDesc}>Turn your hero into a tradeable NFT</Text>
-              </View>
-              <ArrowUpRight color="#FFFFFF" size={20} />
-            </LinearGradient>
-          </TouchableOpacity>
-
           <View style={styles.bottomSpacer} />
         </ScrollView>
 
+        {/* Hero Detail Modal */}
         <Modal
           visible={!!selectedHero}
           transparent
@@ -559,18 +437,6 @@ export default function HeroesScreen() {
                         </LinearGradient>
                       </TouchableOpacity>
                     )}
-
-                    {/* Modal Web3 Actions */}
-                    <View style={styles.modalWeb3Actions}>
-                      <TouchableOpacity style={styles.modalWeb3Button}>
-                        <ArrowUpRight color="#8B5CF6" size={16} />
-                        <Text style={styles.modalWeb3ButtonText}>Mint NFT</Text>
-                      </TouchableOpacity>
-                      <TouchableOpacity style={styles.modalWeb3Button}>
-                        <ShoppingCart color="#3B82F6" size={16} />
-                        <Text style={styles.modalWeb3ButtonText}>List for Sale</Text>
-                      </TouchableOpacity>
-                    </View>
                   </>
                 ) : (
                   <>
@@ -604,6 +470,7 @@ export default function HeroesScreen() {
           )}
         </Modal>
 
+        {/* Claim Success Modal */}
         <Modal
           visible={showClaimModal}
           transparent
@@ -625,129 +492,6 @@ export default function HeroesScreen() {
               >
                 <Text style={styles.claimSuccessButtonText}>Awesome!</Text>
               </TouchableOpacity>
-            </View>
-          </View>
-        </Modal>
-
-        {/* Marketplace Modal */}
-        <Modal
-          visible={showMarketplace}
-          transparent
-          animationType="slide"
-          onRequestClose={() => setShowMarketplace(false)}
-        >
-          <View style={styles.marketplaceOverlay}>
-            <View style={styles.marketplaceModal}>
-              <View style={styles.marketplaceHeader}>
-                <View style={styles.marketplaceTitleRow}>
-                  <View style={styles.marketplaceTitleIcon}>
-                    <ShoppingCart color="#FBBF24" size={24} />
-                  </View>
-                  <View>
-                    <Text style={styles.marketplaceTitle}>Marketplace</Text>
-                    <Text style={styles.marketplaceSubtitle}>Buy heroes with SuperCash</Text>
-                  </View>
-                </View>
-                <TouchableOpacity
-                  style={styles.marketplaceClose}
-                  onPress={() => setShowMarketplace(false)}
-                >
-                  <X color="#94A3B8" size={24} />
-                </TouchableOpacity>
-              </View>
-
-              <View style={styles.marketplaceBalance}>
-                <Coins color="#FBBF24" size={18} />
-                <Text style={styles.marketplaceBalanceText}>
-                  Your Balance: {profile?.supercash_balance?.toLocaleString() || 0} SC
-                </Text>
-              </View>
-
-              <ScrollView style={styles.marketplaceList} showsVerticalScrollIndicator={false}>
-                {marketplaceHeroes.map(hero => {
-                  const price = getHeroPrice(hero.hero_rarities);
-                  const canAfford = (profile?.supercash_balance || 0) >= price;
-                  const owned = userHeroes.some(uh => uh.hero_id === hero.id);
-                  const isPurchasing = purchasing === hero.id;
-
-                  return (
-                    <View
-                      key={hero.id}
-                      style={[
-                        styles.marketplaceItem,
-                        { borderColor: hero.hero_rarities.color_hex + '40' },
-                      ]}
-                    >
-                      <Image
-                        source={getHeroImageSource(hero.image_url)}
-                        style={styles.marketplaceHeroImage}
-                      />
-                      <View style={styles.marketplaceHeroInfo}>
-                        <Text style={styles.marketplaceHeroName}>{hero.name}</Text>
-                        <View
-                          style={[
-                            styles.marketplaceRarityBadge,
-                            { backgroundColor: hero.hero_rarities.color_hex + '20' },
-                          ]}
-                        >
-                          <Text
-                            style={[
-                              styles.marketplaceRarityText,
-                              { color: hero.hero_rarities.color_hex },
-                            ]}
-                          >
-                            {hero.hero_rarities.name}
-                          </Text>
-                        </View>
-                        <View style={styles.marketplaceHeroStats}>
-                          <Coins color="#FBBF24" size={12} />
-                          <Text style={styles.marketplaceHeroEarn}>
-                            {hero.hero_rarities.supercash_per_hour}/hr
-                          </Text>
-                        </View>
-                      </View>
-                      <View style={styles.marketplacePriceSection}>
-                        <Text style={styles.marketplacePrice}>{price.toLocaleString()} SC</Text>
-                        {owned ? (
-                          <View style={styles.marketplaceOwnedBadge}>
-                            <Check color="#22C55E" size={14} />
-                            <Text style={styles.marketplaceOwnedText}>Owned</Text>
-                          </View>
-                        ) : (
-                          <TouchableOpacity
-                            style={[
-                              styles.marketplaceBuyButton,
-                              !canAfford && styles.marketplaceBuyButtonDisabled,
-                            ]}
-                            onPress={() => handlePurchaseHero(hero.id, price)}
-                            disabled={!canAfford || isPurchasing}
-                          >
-                            {isPurchasing ? (
-                              <ActivityIndicator size="small" color="#0F172A" />
-                            ) : (
-                              <Text
-                                style={[
-                                  styles.marketplaceBuyButtonText,
-                                  !canAfford && styles.marketplaceBuyButtonTextDisabled,
-                                ]}
-                              >
-                                {canAfford ? 'Buy' : 'Not enough'}
-                              </Text>
-                            )}
-                          </TouchableOpacity>
-                        )}
-                      </View>
-                    </View>
-                  );
-                })}
-
-                {marketplaceHeroes.length === 0 && (
-                  <View style={styles.marketplaceEmpty}>
-                    <ShoppingCart color="#64748B" size={48} />
-                    <Text style={styles.marketplaceEmptyText}>No heroes available</Text>
-                  </View>
-                )}
-              </ScrollView>
             </View>
           </View>
         </Modal>
@@ -799,7 +543,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 12,
   },
-  // Stats Row
   statsRow: {
     flexDirection: 'row',
     gap: 8,
@@ -831,7 +574,6 @@ const styles = StyleSheet.create({
     fontSize: 9,
     color: '#94A3B8',
   },
-  // Claim Card
   claimCard: {
     borderRadius: 14,
     overflow: 'hidden',
@@ -877,7 +619,6 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#22C55E',
   },
-  // Filter Tabs
   filterTabs: {
     flexDirection: 'row',
     gap: 8,
@@ -889,7 +630,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 4,
-    paddingVertical: 8,
+    paddingVertical: 10,
     paddingHorizontal: 8,
     backgroundColor: 'rgba(30, 41, 59, 0.6)',
     borderRadius: 10,
@@ -901,14 +642,13 @@ const styles = StyleSheet.create({
     borderColor: '#FBBF24',
   },
   filterTabText: {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: '600',
     color: '#64748B',
   },
   filterTabTextActive: {
     color: '#FBBF24',
   },
-  // Empty State
   emptyState: {
     backgroundColor: 'rgba(30, 41, 59, 0.5)',
     borderRadius: 16,
@@ -938,7 +678,6 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 18,
   },
-  // Heroes Grid
   heroesGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -1035,139 +774,9 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#FBBF24',
   },
-  // Section
-  section: {
-    marginBottom: 18,
-  },
-  sectionTitle: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: '#FFFFFF',
-    marginBottom: 10,
-  },
-  // Action Grid
-  actionGrid: {
-    flexDirection: 'row',
-    gap: 10,
-  },
-  actionCard: {
-    flex: 1,
-    borderRadius: 12,
-    overflow: 'hidden',
-  },
-  actionCardGradient: {
-    padding: 14,
-    borderWidth: 1,
-    borderColor: 'rgba(100, 116, 139, 0.2)',
-    borderRadius: 12,
-    position: 'relative',
-  },
-  actionCardIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 10,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 10,
-  },
-  actionCardTitle: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#FFFFFF',
-    marginBottom: 2,
-  },
-  actionCardDesc: {
-    fontSize: 10,
-    color: '#94A3B8',
-  },
-  actionCardBadge: {
-    position: 'absolute',
-    top: 10,
-    right: 10,
-    backgroundColor: 'rgba(100, 116, 139, 0.3)',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 4,
-  },
-  actionCardBadgeText: {
-    fontSize: 8,
-    fontWeight: '600',
-    color: '#94A3B8',
-  },
-  // Upgrade Grid
-  upgradeGrid: {
-    gap: 8,
-  },
-  upgradeCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(30, 41, 59, 0.6)',
-    borderRadius: 12,
-    padding: 12,
-    borderWidth: 1,
-    borderColor: 'rgba(100, 116, 139, 0.2)',
-  },
-  upgradeIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 10,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
-  },
-  upgradeInfo: {
-    flex: 1,
-  },
-  upgradeTitle: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#FFFFFF',
-  },
-  upgradeDesc: {
-    fontSize: 10,
-    color: '#94A3B8',
-  },
-  // Mint Banner
-  mintBanner: {
-    borderRadius: 14,
-    overflow: 'hidden',
-    marginBottom: 8,
-  },
-  mintBannerGradient: {
-    padding: 14,
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(139, 92, 246, 0.3)',
-    borderRadius: 14,
-  },
-  mintBannerIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 10,
-    backgroundColor: 'rgba(255, 255, 255, 0.15)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
-  },
-  mintBannerText: {
-    flex: 1,
-  },
-  mintBannerTitle: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#FFFFFF',
-    marginBottom: 2,
-  },
-  mintBannerDesc: {
-    fontSize: 10,
-    color: 'rgba(255, 255, 255, 0.7)',
-  },
   bottomSpacer: {
     height: 24,
   },
-  // Modal
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.8)',
@@ -1304,30 +913,6 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#EF4444',
   },
-  // Modal Web3 Actions
-  modalWeb3Actions: {
-    flexDirection: 'row',
-    gap: 10,
-    marginTop: 12,
-    width: '100%',
-  },
-  modalWeb3Button: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    paddingVertical: 10,
-    backgroundColor: 'rgba(100, 116, 139, 0.2)',
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: 'rgba(100, 116, 139, 0.2)',
-  },
-  modalWeb3ButtonText: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: '#94A3B8',
-  },
   revealButton: {
     width: '100%',
     borderRadius: 10,
@@ -1387,172 +972,5 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '700',
     color: '#0F172A',
-  },
-  // Marketplace Modal
-  marketplaceOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.9)',
-    justifyContent: 'flex-end',
-  },
-  marketplaceModal: {
-    backgroundColor: '#1E293B',
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    maxHeight: height * 0.85,
-    paddingBottom: 24,
-  },
-  marketplaceHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    padding: 20,
-    paddingBottom: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(100, 116, 139, 0.2)',
-  },
-  marketplaceTitleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  marketplaceTitleIcon: {
-    width: 44,
-    height: 44,
-    borderRadius: 12,
-    backgroundColor: 'rgba(251, 191, 36, 0.15)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  marketplaceTitle: {
-    fontSize: 20,
-    fontWeight: '800',
-    color: '#FFFFFF',
-  },
-  marketplaceSubtitle: {
-    fontSize: 12,
-    color: '#94A3B8',
-    marginTop: 2,
-  },
-  marketplaceClose: {
-    padding: 4,
-  },
-  marketplaceBalance: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    backgroundColor: 'rgba(251, 191, 36, 0.1)',
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    marginHorizontal: 20,
-    marginTop: 12,
-    marginBottom: 8,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: 'rgba(251, 191, 36, 0.2)',
-  },
-  marketplaceBalanceText: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#FBBF24',
-  },
-  marketplaceList: {
-    paddingHorizontal: 20,
-    paddingTop: 8,
-  },
-  marketplaceItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(30, 41, 59, 0.8)',
-    borderRadius: 14,
-    padding: 12,
-    marginBottom: 10,
-    borderWidth: 1,
-  },
-  marketplaceHeroImage: {
-    width: 64,
-    height: 64,
-    borderRadius: 10,
-  },
-  marketplaceHeroInfo: {
-    flex: 1,
-    marginLeft: 12,
-  },
-  marketplaceHeroName: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#FFFFFF',
-    marginBottom: 4,
-  },
-  marketplaceRarityBadge: {
-    alignSelf: 'flex-start',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 6,
-    marginBottom: 6,
-  },
-  marketplaceRarityText: {
-    fontSize: 10,
-    fontWeight: '700',
-  },
-  marketplaceHeroStats: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  marketplaceHeroEarn: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#FBBF24',
-  },
-  marketplacePriceSection: {
-    alignItems: 'flex-end',
-    gap: 6,
-  },
-  marketplacePrice: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#FFFFFF',
-  },
-  marketplaceBuyButton: {
-    backgroundColor: '#FBBF24',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 8,
-    minWidth: 80,
-    alignItems: 'center',
-  },
-  marketplaceBuyButtonDisabled: {
-    backgroundColor: 'rgba(100, 116, 139, 0.3)',
-  },
-  marketplaceBuyButtonText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#0F172A',
-  },
-  marketplaceBuyButtonTextDisabled: {
-    color: '#64748B',
-  },
-  marketplaceOwnedBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    backgroundColor: 'rgba(34, 197, 94, 0.15)',
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 8,
-  },
-  marketplaceOwnedText: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: '#22C55E',
-  },
-  marketplaceEmpty: {
-    alignItems: 'center',
-    paddingVertical: 40,
-  },
-  marketplaceEmptyText: {
-    fontSize: 14,
-    color: '#64748B',
-    marginTop: 12,
   },
 });
