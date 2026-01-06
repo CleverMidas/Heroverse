@@ -115,7 +115,7 @@ export default function HeroesScreen() {
   if (loading) {
     return (
       <ImageBackground 
-        source={require('@/assets/photo_2025-12-10_12-50-44.jpg')} 
+        source={require('@/assets/home_bg.jpg')} 
         style={styles.container}
         resizeMode="cover"
       >
@@ -131,7 +131,7 @@ export default function HeroesScreen() {
 
   return (
     <ImageBackground 
-      source={require('@/assets/photo_2025-12-10_12-50-44.jpg')} 
+      source={require('@/assets/home_bg.jpg')} 
       style={styles.container}
       resizeMode="cover"
     >
@@ -765,7 +765,7 @@ const styles = StyleSheet.create({
   },
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(15, 23, 42, 0.85)',
+    backgroundColor: 'rgba(10, 15, 30, 0.75)',
   },
   safeArea: {
     flex: 1,

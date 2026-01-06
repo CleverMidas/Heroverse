@@ -22,7 +22,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 
 const { width, height } = Dimensions.get('window');
 
-const backgroundImage = require('@/assets/photo_2025-12-10_12-50-44.jpg');
+const backgroundImage = require('@/assets/sign_bg.jpg');
 
 export default function LoginScreen() {
   const router = useRouter();
