@@ -12,25 +12,19 @@ import { getHeroImageSource } from '@/lib/heroImages';
 export default function HomeScreen() {
   const router = useRouter();
   const { profile } = useAuth();
-  const { userHeroes, pendingSupercash, collectSupercash } = useGame();
+  const { stackedHeroes, pendingSupercash, collectSupercash } = useGame();
 
-  const activeHeroes = userHeroes.filter(h => h.is_active);
-  const totalEarningRate = activeHeroes.reduce(
-    (sum, h) => sum + h.heroes.hero_rarities.supercash_per_hour,
-    0
-  );
+  const totalEarningRate = stackedHeroes.reduce((sum, s) => sum + s.totalEarningRate, 0);
+  const activeHeroCount = stackedHeroes.reduce((sum, s) => sum + s.activeCount, 0);
+  const totalHeroCount = stackedHeroes.reduce((sum, s) => sum + s.count, 0);
 
   const handleCollect = async () => {
     await collectSupercash();
   };
 
   const formatNumber = (num: number): string => {
-    if (num >= 1000000) {
-      return (num / 1000000).toFixed(1) + 'M';
-    }
-    if (num >= 1000) {
-      return (num / 1000).toFixed(1) + 'K';
-    }
+    if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M';
+    if (num >= 1000) return (num / 1000).toFixed(1) + 'K';
     return num.toLocaleString();
   };
 
@@ -46,7 +40,6 @@ export default function HomeScreen() {
       <View style={styles.overlay}>
       <SafeAreaView style={styles.safeArea}>
         <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-          {/* SuperCash Balance Card */}
           <View style={styles.balanceCard}>
             <LinearGradient
               colors={['#FBBF24', '#F59E0B']}
@@ -70,7 +63,7 @@ export default function HomeScreen() {
                 </View>
                 <View style={styles.balanceStat}>
                   <Zap color="#0F172A" size={14} />
-                  <Text style={styles.balanceStatText}>{activeHeroes.length} Active</Text>
+                  <Text style={styles.balanceStatText}>{activeHeroCount} Active</Text>
                 </View>
               </View>
             </LinearGradient>
@@ -89,9 +82,7 @@ export default function HomeScreen() {
                     <Text style={styles.collectLabel}>Ready to Collect</Text>
                     <View style={styles.collectAmount}>
                       <Sparkles color="#FFFFFF" size={20} />
-                      <Text style={styles.collectValue}>
-                        +{formatNumber(pendingSupercash)}
-                      </Text>
+                      <Text style={styles.collectValue}>+{formatNumber(pendingSupercash)}</Text>
                     </View>
                   </View>
                   <View style={styles.collectButton}>
@@ -102,7 +93,6 @@ export default function HomeScreen() {
             </TouchableOpacity>
           )}
 
-          {/* Daily Quests Preview */}
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionTitle}>Daily Quests</Text>
@@ -154,7 +144,6 @@ export default function HomeScreen() {
             </View>
           </View>
 
-          {/* Active Heroes */}
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionTitle}>Active Heroes</Text>
@@ -167,7 +156,7 @@ export default function HomeScreen() {
               </TouchableOpacity>
             </View>
 
-            {activeHeroes.length === 0 ? (
+            {activeHeroCount === 0 ? (
               <View style={styles.emptyState}>
                 <View style={styles.emptyIcon}>
                   <Zap color="#64748B" size={32} />
@@ -189,41 +178,31 @@ export default function HomeScreen() {
                 showsHorizontalScrollIndicator={false}
                 contentContainerStyle={styles.heroesScroll}
               >
-                {activeHeroes.slice(0, 5).map(hero => (
+                {stackedHeroes.filter(s => s.isAnyActive).slice(0, 5).map(stack => (
                   <View
-                    key={hero.id}
-                    style={[
-                      styles.heroCard,
-                      { borderColor: hero.heroes.hero_rarities.color_hex },
-                    ]}
+                    key={stack.hero_id}
+                    style={[styles.heroCard, { borderColor: stack.hero.hero_rarities.color_hex }]}
                   >
+                    {stack.count > 1 && (
+                      <View style={styles.stackBadge}>
+                        <Text style={styles.stackBadgeText}>{stack.count}X</Text>
+                      </View>
+                    )}
                     <Image
-                      source={getHeroImageSource(hero.heroes.image_url)}
+                      source={getHeroImageSource(stack.hero.image_url)}
                       style={styles.heroImage}
                     />
                     <View style={styles.heroInfo}>
-                      <Text style={styles.heroName} numberOfLines={1}>
-                        {hero.heroes.name}
-                      </Text>
-                      <View
-                        style={[
-                          styles.rarityBadge,
-                          { backgroundColor: hero.heroes.hero_rarities.color_hex + '20' },
-                        ]}
-                      >
-                        <Text
-                          style={[
-                            styles.rarityText,
-                            { color: hero.heroes.hero_rarities.color_hex },
-                          ]}
-                        >
-                          {hero.heroes.hero_rarities.name}
+                      <Text style={styles.heroName} numberOfLines={1}>{stack.hero.name}</Text>
+                      <View style={[styles.rarityBadge, { backgroundColor: stack.hero.hero_rarities.color_hex + '20' }]}>
+                        <Text style={[styles.rarityText, { color: stack.hero.hero_rarities.color_hex }]}>
+                          {stack.hero.hero_rarities.name}
                         </Text>
                       </View>
                       <View style={styles.heroEarning}>
                         <Coins color="#FBBF24" size={12} />
                         <Text style={styles.heroEarningText}>
-                          {hero.heroes.hero_rarities.supercash_per_hour}/hr
+                          {stack.count > 1 ? `${stack.count}×${stack.hero.hero_rarities.supercash_per_hour}` : stack.hero.hero_rarities.supercash_per_hour}/hr
                         </Text>
                       </View>
                     </View>
@@ -233,7 +212,6 @@ export default function HomeScreen() {
             )}
           </View>
 
-          {/* Stats Grid */}
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Quick Stats</Text>
             <View style={styles.statsGridCompact}>
@@ -244,12 +222,12 @@ export default function HomeScreen() {
               </View>
               <View style={styles.statCardCompact}>
                 <Zap color="#22C55E" size={18} />
-                <Text style={styles.statCardValueCompact}>{userHeroes.length}</Text>
+                <Text style={styles.statCardValueCompact}>{totalHeroCount}</Text>
                 <Text style={styles.statCardLabelCompact}>Heroes</Text>
               </View>
               <View style={styles.statCardCompact}>
                 <TrendingUp color="#3B82F6" size={18} />
-                <Text style={styles.statCardValueCompact}>{activeHeroes.length}</Text>
+                <Text style={styles.statCardValueCompact}>{activeHeroCount}</Text>
                 <Text style={styles.statCardLabelCompact}>Active</Text>
               </View>
               <View style={styles.statCardCompact}>
@@ -269,354 +247,71 @@ export default function HomeScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    width: width,
-    height: height,
-  },
-  overlay: {
-    flex: 1,
-    backgroundColor: 'rgba(10, 15, 30, 0.75)',
-  },
-  safeArea: {
-    flex: 1,
-  },
-  scrollView: {
-    flex: 1,
-    paddingHorizontal: 16,
-  },
-  // Balance Card
-  balanceCard: {
-    borderRadius: 20,
-    overflow: 'hidden',
-    marginTop: 12,
-    marginBottom: 16,
-  },
-  balanceGradient: {
-    padding: 20,
-  },
-  balanceHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  balanceIconContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    backgroundColor: 'rgba(15, 23, 42, 0.2)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 10,
-  },
-  balanceLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#0F172A',
-  },
-  balanceAmount: {
-    fontSize: 40,
-    fontWeight: '800',
-    color: '#0F172A',
-    marginBottom: 8,
-  },
-  balanceFooter: {
-    flexDirection: 'row',
-    gap: 16,
-  },
-  balanceStat: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  balanceStatText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#0F172A',
-  },
-  // Collect Card
-  collectCard: {
-    borderRadius: 14,
-    overflow: 'hidden',
-    marginBottom: 16,
-  },
-  collectGradient: {
-    padding: 16,
-  },
-  collectContent: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  collectLabel: {
-    fontSize: 11,
-    fontWeight: '500',
-    color: 'rgba(255, 255, 255, 0.8)',
-    marginBottom: 2,
-  },
-  collectAmount: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  collectValue: {
-    fontSize: 22,
-    fontWeight: '700',
-    color: '#FFFFFF',
-  },
-  collectButton: {
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 10,
-  },
-  collectButtonText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#FFFFFF',
-  },
-  // Sections
-  section: {
-    marginBottom: 20,
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#FFFFFF',
-  },
-  seeAllButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 2,
-  },
-  seeAllText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#FBBF24',
-  },
-  // Quest Card
-  questCard: {
-    backgroundColor: 'rgba(30, 41, 59, 0.6)',
-    borderRadius: 14,
-    padding: 14,
-    borderWidth: 1,
-    borderColor: 'rgba(100, 116, 139, 0.2)',
-  },
-  questProgress: {
-    marginBottom: 12,
-  },
-  questProgressHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 10,
-  },
-  questIconContainer: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
-    backgroundColor: 'rgba(251, 191, 36, 0.15)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 10,
-  },
-  questInfo: {
-    flex: 1,
-  },
-  questTitle: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#FFFFFF',
-  },
-  questSubtitle: {
-    fontSize: 11,
-    color: '#94A3B8',
-  },
-  questReward: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    backgroundColor: 'rgba(34, 197, 94, 0.15)',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
-  },
-  questRewardText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#22C55E',
-  },
-  progressBar: {
-    height: 6,
-    backgroundColor: 'rgba(100, 116, 139, 0.2)',
-    borderRadius: 3,
-    overflow: 'hidden',
-  },
-  progressFill: {
-    height: '100%',
-    backgroundColor: '#FBBF24',
-    borderRadius: 3,
-  },
-  questList: {
-    gap: 8,
-  },
-  questItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-  },
-  questCheck: {
-    width: 20,
-    height: 20,
-    borderRadius: 6,
-    borderWidth: 2,
-    borderColor: 'rgba(100, 116, 139, 0.4)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  questCheckCompleted: {
-    backgroundColor: '#22C55E',
-    borderColor: '#22C55E',
-  },
-  questCheckText: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: '#FFFFFF',
-  },
-  questItemText: {
-    flex: 1,
-    fontSize: 12,
-    color: '#FFFFFF',
-  },
-  questItemCompleted: {
-    color: '#94A3B8',
-    textDecorationLine: 'line-through',
-  },
-  questItemReward: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: '#FBBF24',
-  },
-  // Empty State
-  emptyState: {
-    backgroundColor: 'rgba(30, 41, 59, 0.5)',
-    borderRadius: 14,
-    padding: 24,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(100, 116, 139, 0.2)',
-  },
-  emptyIcon: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: 'rgba(100, 116, 139, 0.1)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  emptyTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#FFFFFF',
-    marginBottom: 6,
-  },
-  emptyText: {
-    fontSize: 12,
-    color: '#94A3B8',
-    textAlign: 'center',
-    lineHeight: 18,
-    marginBottom: 16,
-  },
-  emptyButton: {
-    backgroundColor: '#FBBF24',
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 10,
-  },
-  emptyButtonText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#0F172A',
-  },
-  // Heroes Scroll
-  heroesScroll: {
-    paddingRight: 16,
-    gap: 10,
-  },
-  heroCard: {
-    width: 120,
-    backgroundColor: 'rgba(30, 41, 59, 0.8)',
-    borderRadius: 12,
-    overflow: 'hidden',
-    borderWidth: 2,
-  },
-  heroImage: {
-    width: '100%',
-    height: 100,
-  },
-  heroInfo: {
-    padding: 10,
-  },
-  heroName: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#FFFFFF',
-    marginBottom: 4,
-  },
-  rarityBadge: {
-    alignSelf: 'flex-start',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 4,
-    marginBottom: 6,
-  },
-  rarityText: {
-    fontSize: 9,
-    fontWeight: '700',
-  },
-  heroEarning: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 3,
-  },
-  heroEarningText: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: '#FBBF24',
-  },
-  // Stats Grid Compact
-  statsGridCompact: {
-    flexDirection: 'row',
-    gap: 10,
-    marginTop: 8,
-  },
-  statCardCompact: {
-    flex: 1,
-    backgroundColor: 'rgba(30, 41, 59, 0.5)',
-    borderRadius: 12,
-    padding: 12,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(100, 116, 139, 0.2)',
-  },
-  statCardValueCompact: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#FFFFFF',
-    marginTop: 6,
-    marginBottom: 2,
-  },
-  statCardLabelCompact: {
-    fontSize: 10,
-    color: '#94A3B8',
-  },
-  bottomSpacer: {
-    height: 24,
-  },
+  container: { flex: 1, width, height },
+  overlay: { flex: 1, backgroundColor: 'rgba(10, 15, 30, 0.75)' },
+  safeArea: { flex: 1 },
+  scrollView: { flex: 1, paddingHorizontal: 16 },
+  balanceCard: { borderRadius: 20, overflow: 'hidden', marginTop: 12, marginBottom: 16 },
+  balanceGradient: { padding: 20 },
+  balanceHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
+  balanceIconContainer: { width: 40, height: 40, borderRadius: 12, backgroundColor: 'rgba(15, 23, 42, 0.2)', justifyContent: 'center', alignItems: 'center', marginRight: 10 },
+  balanceLabel: { fontSize: 14, fontWeight: '600', color: '#0F172A' },
+  balanceAmount: { fontSize: 40, fontWeight: '800', color: '#0F172A', marginBottom: 8 },
+  balanceFooter: { flexDirection: 'row', gap: 16 },
+  balanceStat: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  balanceStatText: { fontSize: 12, fontWeight: '600', color: '#0F172A' },
+  collectCard: { borderRadius: 14, overflow: 'hidden', marginBottom: 16 },
+  collectGradient: { padding: 16 },
+  collectContent: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  collectLabel: { fontSize: 11, fontWeight: '500', color: 'rgba(255, 255, 255, 0.8)', marginBottom: 2 },
+  collectAmount: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  collectValue: { fontSize: 22, fontWeight: '700', color: '#FFFFFF' },
+  collectButton: { backgroundColor: 'rgba(255, 255, 255, 0.2)', paddingHorizontal: 16, paddingVertical: 10, borderRadius: 10 },
+  collectButtonText: { fontSize: 12, fontWeight: '700', color: '#FFFFFF' },
+  section: { marginBottom: 20 },
+  sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
+  sectionTitle: { fontSize: 16, fontWeight: '700', color: '#FFFFFF' },
+  seeAllButton: { flexDirection: 'row', alignItems: 'center', gap: 2 },
+  seeAllText: { fontSize: 12, fontWeight: '600', color: '#FBBF24' },
+  questCard: { backgroundColor: 'rgba(30, 41, 59, 0.6)', borderRadius: 14, padding: 14, borderWidth: 1, borderColor: 'rgba(100, 116, 139, 0.2)' },
+  questProgress: { marginBottom: 12 },
+  questProgressHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 10 },
+  questIconContainer: { width: 36, height: 36, borderRadius: 10, backgroundColor: 'rgba(251, 191, 36, 0.15)', justifyContent: 'center', alignItems: 'center', marginRight: 10 },
+  questInfo: { flex: 1 },
+  questTitle: { fontSize: 13, fontWeight: '700', color: '#FFFFFF' },
+  questSubtitle: { fontSize: 11, color: '#94A3B8' },
+  questReward: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: 'rgba(34, 197, 94, 0.15)', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 },
+  questRewardText: { fontSize: 12, fontWeight: '700', color: '#22C55E' },
+  progressBar: { height: 6, backgroundColor: 'rgba(100, 116, 139, 0.2)', borderRadius: 3, overflow: 'hidden' },
+  progressFill: { height: '100%', backgroundColor: '#FBBF24', borderRadius: 3 },
+  questList: { gap: 8 },
+  questItem: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  questCheck: { width: 20, height: 20, borderRadius: 6, borderWidth: 2, borderColor: 'rgba(100, 116, 139, 0.4)', justifyContent: 'center', alignItems: 'center' },
+  questCheckCompleted: { backgroundColor: '#22C55E', borderColor: '#22C55E' },
+  questCheckText: { fontSize: 10, fontWeight: '700', color: '#FFFFFF' },
+  questItemText: { flex: 1, fontSize: 12, color: '#FFFFFF' },
+  questItemCompleted: { color: '#94A3B8', textDecorationLine: 'line-through' },
+  questItemReward: { fontSize: 11, fontWeight: '600', color: '#FBBF24' },
+  emptyState: { backgroundColor: 'rgba(30, 41, 59, 0.5)', borderRadius: 14, padding: 24, alignItems: 'center', borderWidth: 1, borderColor: 'rgba(100, 116, 139, 0.2)' },
+  emptyIcon: { width: 56, height: 56, borderRadius: 28, backgroundColor: 'rgba(100, 116, 139, 0.1)', justifyContent: 'center', alignItems: 'center', marginBottom: 12 },
+  emptyTitle: { fontSize: 16, fontWeight: '700', color: '#FFFFFF', marginBottom: 6 },
+  emptyText: { fontSize: 12, color: '#94A3B8', textAlign: 'center', lineHeight: 18, marginBottom: 16 },
+  emptyButton: { backgroundColor: '#FBBF24', paddingHorizontal: 20, paddingVertical: 10, borderRadius: 10 },
+  emptyButtonText: { fontSize: 12, fontWeight: '700', color: '#0F172A' },
+  heroesScroll: { paddingRight: 16, gap: 10 },
+  heroCard: { width: 120, backgroundColor: 'rgba(30, 41, 59, 0.8)', borderRadius: 12, overflow: 'hidden', borderWidth: 2 },
+  stackBadge: { position: 'absolute', top: 6, right: 6, zIndex: 10, backgroundColor: '#FBBF24', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6 },
+  stackBadgeText: { fontSize: 10, fontWeight: '800', color: '#0F172A' },
+  heroImage: { width: '100%', height: 100 },
+  heroInfo: { padding: 10 },
+  heroName: { fontSize: 12, fontWeight: '700', color: '#FFFFFF', marginBottom: 4 },
+  rarityBadge: { alignSelf: 'flex-start', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4, marginBottom: 6 },
+  rarityText: { fontSize: 9, fontWeight: '700' },
+  heroEarning: { flexDirection: 'row', alignItems: 'center', gap: 3 },
+  heroEarningText: { fontSize: 11, fontWeight: '600', color: '#FBBF24' },
+  statsGridCompact: { flexDirection: 'row', gap: 10, marginTop: 8 },
+  statCardCompact: { flex: 1, backgroundColor: 'rgba(30, 41, 59, 0.5)', borderRadius: 12, padding: 12, alignItems: 'center', borderWidth: 1, borderColor: 'rgba(100, 116, 139, 0.2)' },
+  statCardValueCompact: { fontSize: 16, fontWeight: '700', color: '#FFFFFF', marginTop: 6, marginBottom: 2 },
+  statCardLabelCompact: { fontSize: 10, color: '#94A3B8' },
+  bottomSpacer: { height: 24 },
 });
