@@ -6,7 +6,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
 import { useGame } from '@/contexts/GameContext';
-import { Zap, TrendingUp, Clock, Coins, ChevronRight, Sparkles, Gift, Target } from 'lucide-react-native';
+import { Zap, TrendingUp, Clock, Coins, ChevronRight, Sparkles, Gift, Target, Layers } from 'lucide-react-native';
 import { getHeroImageSource } from '@/lib/heroImages';
 
 export default function HomeScreen() {
@@ -42,28 +42,52 @@ export default function HomeScreen() {
         <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
           <View style={styles.balanceCard}>
             <LinearGradient
-              colors={['#FBBF24', '#F59E0B']}
+              colors={['#FBBF24', '#D97706']}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
               style={styles.balanceGradient}
             >
-              <View style={styles.balanceHeader}>
-                <View style={styles.balanceIconContainer}>
-                  <Coins color="#0F172A" size={24} />
+              <View style={styles.balanceGlowTop} />
+              <View style={styles.balanceContent}>
+                <View style={styles.balanceLabelContainer}>
+                  <Text style={styles.balanceLabel}>TOTAL </Text>
+                  <Text style={styles.balanceLabelAccent}>BALANCE</Text>
                 </View>
-                <Text style={styles.balanceLabel}>SuperCash Balance</Text>
-              </View>
-              <Text style={styles.balanceAmount}>
-                {formatNumber(profile?.supercash_balance || 0)}
-              </Text>
-              <View style={styles.balanceFooter}>
-                <View style={styles.balanceStat}>
-                  <TrendingUp color="#0F172A" size={14} />
-                  <Text style={styles.balanceStatText}>{formatNumber(totalEarningRate)}/hr</Text>
+                <View style={styles.balanceAmountContainer}>
+                  <Text style={styles.balanceCurrency}>$</Text>
+                  <Text style={styles.balanceAmount}>{formatNumber(profile?.supercash_balance || 0)}</Text>
+                  <Text style={styles.balanceSC}>SC</Text>
                 </View>
-                <View style={styles.balanceStat}>
-                  <Zap color="#0F172A" size={14} />
-                  <Text style={styles.balanceStatText}>{activeHeroCount} Active</Text>
+                <View style={styles.balanceStats}>
+                  <View style={styles.balanceStat}>
+                    <View style={styles.balanceStatIcon}>
+                      <TrendingUp color="#166534" size={14} />
+                    </View>
+                    <Text style={styles.balanceStatText}>
+                      <Text style={styles.balanceStatHighlight}>+{formatNumber(totalEarningRate)}</Text>
+                      <Text style={{ color: '#166534' }}> /hr</Text>
+                    </Text>
+                  </View>
+                  <View style={styles.balanceStatSeparator} />
+                  <View style={styles.balanceStat}>
+                    <View style={styles.balanceStatIcon}>
+                      <Layers color="#78350F" size={14} />
+                    </View>
+                    <Text style={styles.balanceStatText}>
+                      <Text style={styles.balanceStatHighlight}>{totalHeroCount}</Text>
+                      <Text style={{ color: '#78350F' }}> Heroes</Text>
+                    </Text>
+                  </View>
+                  <View style={styles.balanceStatSeparator} />
+                  <View style={styles.balanceStat}>
+                    <View style={styles.balanceStatIcon}>
+                      <Zap color="#1D4ED8" size={14} />
+                    </View>
+                    <Text style={styles.balanceStatText}>
+                      <Text style={styles.balanceStatHighlight}>{activeHeroCount}</Text>
+                      <Text style={{ color: '#1D4ED8' }}> Active</Text>
+                    </Text>
+                  </View>
                 </View>
               </View>
             </LinearGradient>
@@ -251,15 +275,23 @@ const styles = StyleSheet.create({
   overlay: { flex: 1, backgroundColor: 'rgba(10, 15, 30, 0.75)' },
   safeArea: { flex: 1 },
   scrollView: { flex: 1, paddingHorizontal: 16 },
-  balanceCard: { borderRadius: 20, overflow: 'hidden', marginTop: 12, marginBottom: 16 },
-  balanceGradient: { padding: 20 },
-  balanceHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
-  balanceIconContainer: { width: 40, height: 40, borderRadius: 12, backgroundColor: 'rgba(15, 23, 42, 0.2)', justifyContent: 'center', alignItems: 'center', marginRight: 10 },
-  balanceLabel: { fontSize: 14, fontWeight: '600', color: '#0F172A' },
-  balanceAmount: { fontSize: 40, fontWeight: '800', color: '#0F172A', marginBottom: 8 },
-  balanceFooter: { flexDirection: 'row', gap: 16 },
-  balanceStat: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  balanceStatText: { fontSize: 12, fontWeight: '600', color: '#0F172A' },
+  balanceCard: { borderRadius: 24, overflow: 'hidden', marginTop: 12, marginBottom: 16, shadowColor: '#F59E0B', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 12, elevation: 8 },
+  balanceGradient: { paddingHorizontal: 20, paddingVertical: 24, position: 'relative' },
+  balanceGlowTop: { position: 'absolute', top: -40, right: -40, width: 120, height: 120, borderRadius: 60, backgroundColor: 'rgba(255, 255, 255, 0.25)' },
+  balanceContent: { position: 'relative', zIndex: 1 },
+  balanceLabelContainer: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: 10 },
+  balanceLabel: { fontSize: 15, fontWeight: '800', color: '#78350F', letterSpacing: 2 },
+  balanceLabelAccent: { fontSize: 15, fontWeight: '800', color: '#1C1917', letterSpacing: 2 },
+  balanceAmountContainer: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'center', marginBottom: 20 },
+  balanceCurrency: { fontSize: 24, fontWeight: '400', color: '#78350F', marginTop: 6, marginRight: 2 },
+  balanceAmount: { fontSize: 48, fontWeight: '800', color: '#1C1917', letterSpacing: -1 },
+  balanceSC: { fontSize: 14, fontWeight: '600', color: 'rgba(0, 0, 0, 0.4)', marginTop: 10, marginLeft: 6 },
+  balanceStats: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center' },
+  balanceStat: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  balanceStatIcon: { width: 26, height: 26, borderRadius: 7, backgroundColor: 'rgba(0, 0, 0, 0.1)', justifyContent: 'center', alignItems: 'center' },
+  balanceStatText: { fontSize: 12, color: 'rgba(0, 0, 0, 0.5)' },
+  balanceStatHighlight: { fontWeight: '700', color: '#1C1917' },
+  balanceStatSeparator: { width: 1, height: 20, backgroundColor: 'rgba(0, 0, 0, 0.15)', marginHorizontal: 12 },
   collectCard: { borderRadius: 14, overflow: 'hidden', marginBottom: 16 },
   collectGradient: { padding: 16 },
   collectContent: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
