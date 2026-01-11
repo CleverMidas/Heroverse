@@ -183,15 +183,15 @@ export default function HomeScreen() {
                     key={stack.hero_id}
                     style={[styles.heroCard, { borderColor: stack.hero.hero_rarities.color_hex }]}
                   >
+                    <Image
+                      source={getHeroImageSource(stack.hero.image_url)}
+                      style={styles.heroImage}
+                    />
                     {stack.count > 1 && (
                       <View style={styles.stackBadge}>
                         <Text style={styles.stackBadgeText}>{stack.count}X</Text>
                       </View>
                     )}
-                    <Image
-                      source={getHeroImageSource(stack.hero.image_url)}
-                      style={styles.heroImage}
-                    />
                     <View style={styles.heroInfo}>
                       <Text style={styles.heroName} numberOfLines={1}>{stack.hero.name}</Text>
                       <View style={[styles.rarityBadge, { backgroundColor: stack.hero.hero_rarities.color_hex + '20' }]}>
@@ -202,7 +202,7 @@ export default function HomeScreen() {
                       <View style={styles.heroEarning}>
                         <Coins color="#FBBF24" size={12} />
                         <Text style={styles.heroEarningText}>
-                          {stack.count > 1 ? `${stack.count}×${stack.hero.hero_rarities.supercash_per_hour}` : stack.hero.hero_rarities.supercash_per_hour}/hr
+                          {stack.hero.hero_rarities.supercash_per_hour}/hr
                         </Text>
                       </View>
                     </View>
@@ -300,8 +300,8 @@ const styles = StyleSheet.create({
   emptyButtonText: { fontSize: 12, fontWeight: '700', color: '#0F172A' },
   heroesScroll: { paddingRight: 16, gap: 10 },
   heroCard: { width: 120, backgroundColor: 'rgba(30, 41, 59, 0.8)', borderRadius: 12, overflow: 'hidden', borderWidth: 2 },
-  stackBadge: { position: 'absolute', top: 6, right: 6, zIndex: 10, backgroundColor: '#FBBF24', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6 },
-  stackBadgeText: { fontSize: 10, fontWeight: '800', color: '#0F172A' },
+  stackBadge: { position: 'absolute', top: 105, right: 6, zIndex: 10, backgroundColor: '#FBBF24', paddingHorizontal: 6, paddingVertical: 3, borderRadius: 6, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.3, shadowRadius: 3, elevation: 4 },
+  stackBadgeText: { fontSize: 12, fontWeight: '900', color: '#0F172A' },
   heroImage: { width: '100%', height: 100 },
   heroInfo: { padding: 10 },
   heroName: { fontSize: 12, fontWeight: '700', color: '#FFFFFF', marginBottom: 4 },

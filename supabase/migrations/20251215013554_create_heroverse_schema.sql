@@ -100,26 +100,15 @@ INSERT INTO hero_rarities (name, tier, supercash_per_hour, color_hex, descriptio
 ON CONFLICT (name) DO NOTHING;
 
 INSERT INTO heroes (name, rarity_id, image_url, is_starter) VALUES
-  ('Guardian Nova', 1, 'https://images.pexels.com/photos/2379005/pexels-photo-2379005.jpeg?auto=compress&cs=tinysrgb&w=400', true),
-  ('Shadow Striker', 1, 'https://images.pexels.com/photos/1680172/pexels-photo-1680172.jpeg?auto=compress&cs=tinysrgb&w=400', false),
-  ('Storm Warden', 2, 'https://images.pexels.com/photos/1681010/pexels-photo-1681010.jpeg?auto=compress&cs=tinysrgb&w=400', false),
-  ('Frost Knight', 2, 'https://images.pexels.com/photos/2379004/pexels-photo-2379004.jpeg?auto=compress&cs=tinysrgb&w=400', false),
-  ('Blaze Phoenix', 3, 'https://images.pexels.com/photos/1043474/pexels-photo-1043474.jpeg?auto=compress&cs=tinysrgb&w=400', false),
-  ('Thunder Lord', 3, 'https://images.pexels.com/photos/1222271/pexels-photo-1222271.jpeg?auto=compress&cs=tinysrgb&w=400', false),
-  ('Void Walker', 4, 'https://images.pexels.com/photos/1300402/pexels-photo-1300402.jpeg?auto=compress&cs=tinysrgb&w=400', false),
-  ('Crimson Fury', 4, 'https://images.pexels.com/photos/1516680/pexels-photo-1516680.jpeg?auto=compress&cs=tinysrgb&w=400', false),
-  ('Golden Titan', 5, 'https://images.pexels.com/photos/2182970/pexels-photo-2182970.jpeg?auto=compress&cs=tinysrgb&w=400', false),
-  ('Eclipse Sage', 5, 'https://images.pexels.com/photos/1462980/pexels-photo-1462980.jpeg?auto=compress&cs=tinysrgb&w=400', false),
-  ('Dragon Emperor', 6, 'https://images.pexels.com/photos/1933873/pexels-photo-1933873.jpeg?auto=compress&cs=tinysrgb&w=400', false),
-  ('Arcane Master', 6, 'https://images.pexels.com/photos/2406949/pexels-photo-2406949.jpeg?auto=compress&cs=tinysrgb&w=400', false),
-  ('Seraph Guardian', 7, 'https://images.pexels.com/photos/3760514/pexels-photo-3760514.jpeg?auto=compress&cs=tinysrgb&w=400', false),
-  ('Astral Warden', 7, 'https://images.pexels.com/photos/3779760/pexels-photo-3779760.jpeg?auto=compress&cs=tinysrgb&w=400', false),
-  ('Nebula King', 8, 'https://images.pexels.com/photos/1704488/pexels-photo-1704488.jpeg?auto=compress&cs=tinysrgb&w=400', false),
-  ('Star Forger', 8, 'https://images.pexels.com/photos/3785079/pexels-photo-3785079.jpeg?auto=compress&cs=tinysrgb&w=400', false),
-  ('Universe Shaper', 9, 'https://images.pexels.com/photos/3771836/pexels-photo-3771836.jpeg?auto=compress&cs=tinysrgb&w=400', false),
-  ('Infinity Lord', 9, 'https://images.pexels.com/photos/2379003/pexels-photo-2379003.jpeg?auto=compress&cs=tinysrgb&w=400', false),
-  ('Omega Prime', 10, 'https://images.pexels.com/photos/3760610/pexels-photo-3760610.jpeg?auto=compress&cs=tinysrgb&w=400', false),
-  ('The Absolute', 10, 'https://images.pexels.com/photos/3778966/pexels-photo-3778966.jpeg?auto=compress&cs=tinysrgb&w=400', false);
+  ('Guardian Nova', 1, 'https://jwacklfxfscwcmlzmcqa.supabase.co/storage/v1/object/public/heroes/hero_3.jpg', true),
+  ('Shadow Striker', 1, 'https://jwacklfxfscwcmlzmcqa.supabase.co/storage/v1/object/public/heroes/hero_1.jpg', false),
+  ('Storm Warden', 2, 'https://jwacklfxfscwcmlzmcqa.supabase.co/storage/v1/object/public/heroes/hero_5.jpg', false),
+  ('Frost Knight', 2, 'https://jwacklfxfscwcmlzmcqa.supabase.co/storage/v1/object/public/heroes/hero_2.jpg', false),
+  ('Blaze Phoenix', 3, 'https://jwacklfxfscwcmlzmcqa.supabase.co/storage/v1/object/public/heroes/hero_6.jpg', false),
+  ('Thunder Lord', 3, 'https://jwacklfxfscwcmlzmcqa.supabase.co/storage/v1/object/public/heroes/hero_4.jpg', false),
+  ('Void Walker', 4, 'https://jwacklfxfscwcmlzmcqa.supabase.co/storage/v1/object/public/heroes/hero_7.jpg', false),
+  ('Crimson Fury', 4, 'https://jwacklfxfscwcmlzmcqa.supabase.co/storage/v1/object/public/heroes/hero_8.jpg', false),
+  ('Golden Titan', 5, 'https://jwacklfxfscwcmlzmcqa.supabase.co/storage/v1/object/public/heroes/hero_9.jpg', false),
 
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS trigger

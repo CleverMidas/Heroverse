@@ -123,9 +123,10 @@ export function GameProvider({ children }: { children: ReactNode }) {
       setError(null);
       const starterHero = allHeroes.find(h => h.is_starter);
       if (!starterHero) { setError('No starter hero available'); return false; }
-      const { error: insertError } = await supabase.from('user_heroes').insert({ user_id: user.id, hero_id: starterHero.id, is_active: false });
+      const { error: insertError } = await supabase.from('user_heroes').insert({ user_id: user.id, hero_id: starterHero.id, is_active: false, is_revealed: true });
       if (insertError) { setError(insertError.message); return false; }
-      await supabase.from('profiles').update({ has_claimed_free_hero: true }).eq('id', user.id);
+      const { error: updateError } = await supabase.from('profiles').update({ has_claimed_free_hero: true }).eq('id', user.id);
+      if (updateError) { setError(updateError.message); return false; }
       await fetchUserHeroes();
       await refreshProfile();
       return true;

@@ -189,9 +189,9 @@ export default function HeroesScreen() {
             </TouchableOpacity>
             {filteredStacks.map(stack => (
                 <TouchableOpacity key={stack.hero_id} style={[styles.heroCard, { borderColor: stack.isAnyRevealed ? stack.isAnyActive ? stack.hero.hero_rarities.color_hex : 'rgba(100, 116, 139, 0.3)' : '#FBBF24' }]} onPress={() => setSelectedStack(stack)}>
-                  {stack.count > 1 && <View style={styles.countBadge}><Text style={styles.countBadgeText}>{stack.count}X</Text></View>}
                   {stack.isAnyActive && stack.isAnyRevealed && <View style={styles.activeBadge}><Sparkles color="#FFFFFF" size={10} /><Text style={styles.activeBadgeText}>ACTIVE</Text></View>}
                   <SkeletonImage source={getHeroImageSource(stack.hero.image_url)} style={styles.heroImage} />
+                  {stack.count > 1 && <View style={styles.countBadge}><Text style={styles.countBadgeText}>{stack.count}X</Text></View>}
                   <View style={styles.heroInfo}>
                     <Text style={styles.heroName} numberOfLines={1}>{stack.isAnyRevealed ? stack.hero.name : '???'}</Text>
                     <View style={[styles.rarityBadge, { backgroundColor: stack.isAnyRevealed ? stack.hero.hero_rarities.color_hex + '20' : 'rgba(251, 191, 36, 0.2)' }]}>
@@ -199,7 +199,7 @@ export default function HeroesScreen() {
                     </View>
                     <View style={styles.heroStats}>
                       <Coins color="#FBBF24" size={12} />
-                      <Text style={styles.heroStatsText}>{stack.isAnyRevealed ? stack.count > 1 ? `${stack.count}×${stack.hero.hero_rarities.supercash_per_hour}/hr` : `${stack.hero.hero_rarities.supercash_per_hour}/hr` : '???'}</Text>
+                      <Text style={styles.heroStatsText}>{stack.isAnyRevealed ? `${stack.hero.hero_rarities.supercash_per_hour}/hr` : '???'}</Text>
                     </View>
                   </View>
                 </TouchableOpacity>
@@ -328,8 +328,8 @@ const styles = StyleSheet.create({
   emptyText: { fontSize: 12, color: '#94A3B8', textAlign: 'center', lineHeight: 18 },
   heroesGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 20 },
   heroCard: { width: (width - 42) / 2, height: 240, backgroundColor: 'rgba(30, 41, 59, 0.8)', borderRadius: 14, overflow: 'hidden', borderWidth: 2 },
-  countBadge: { position: 'absolute', top: 6, left: 6, zIndex: 10, backgroundColor: '#FBBF24', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 },
-  countBadgeText: { fontSize: 10, fontWeight: '800', color: '#0F172A' },
+  countBadge: { position: 'absolute', top: 165, right: 8, zIndex: 10, backgroundColor: '#FBBF24', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.3, shadowRadius: 4, elevation: 5 },
+  countBadgeText: { fontSize: 14, fontWeight: '900', color: '#0F172A' },
   activeBadge: { position: 'absolute', top: 6, right: 6, zIndex: 10, flexDirection: 'row', alignItems: 'center', gap: 3, backgroundColor: '#22C55E', paddingHorizontal: 6, paddingVertical: 3, borderRadius: 6 },
   activeBadgeText: { fontSize: 8, fontWeight: '700', color: '#FFFFFF' },
   heroImage: { width: '100%', height: 160 },

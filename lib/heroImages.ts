@@ -1,9 +1,15 @@
 import { ImageSourcePropType } from 'react-native';
 
 const localHeroImages: Record<string, ImageSourcePropType> = {
-  'hero_1': require('@/assets/hero_1.png'),
-  'hero_2': require('@/assets/hero_2.png'),
-  'hero_3': require('@/assets/hero_3.png'),
+  'hero_1': require('@/assets/heroes/hero_1.jpg'),
+  'hero_2': require('@/assets/heroes/hero_2.jpg'),
+  'hero_3': require('@/assets/heroes/hero_3.jpg'),
+  'hero_4': require('@/assets/heroes/hero_4.jpg'),
+  'hero_5': require('@/assets/heroes/hero_5.jpg'),
+  'hero_6': require('@/assets/heroes/hero_6.jpg'),
+  'hero_7': require('@/assets/heroes/hero_7.jpg'),
+  'hero_8': require('@/assets/heroes/hero_8.jpg'),
+  'hero_9': require('@/assets/heroes/hero_9.jpg'),
 };
 
 export function getHeroImageSource(imageUrl: string | null): ImageSourcePropType {
