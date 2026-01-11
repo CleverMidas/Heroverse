@@ -1,16 +1,3 @@
-/*
-  # Create Heroes Storage Bucket
-
-  1. Changes
-    - Create public 'heroes' storage bucket for hero images
-    - Enable public access for the bucket
-    - Set up RLS policies for bucket access
-
-  2. Security
-    - Public bucket allows anyone to view images
-    - Only authenticated users can upload
-*/
-
 INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
 VALUES (
   'heroes',

@@ -108,7 +108,7 @@ INSERT INTO heroes (name, rarity_id, image_url, is_starter) VALUES
   ('Thunder Lord', 3, 'https://jwacklfxfscwcmlzmcqa.supabase.co/storage/v1/object/public/heroes/hero_4.jpg', false),
   ('Void Walker', 4, 'https://jwacklfxfscwcmlzmcqa.supabase.co/storage/v1/object/public/heroes/hero_7.jpg', false),
   ('Crimson Fury', 4, 'https://jwacklfxfscwcmlzmcqa.supabase.co/storage/v1/object/public/heroes/hero_8.jpg', false),
-  ('Golden Titan', 5, 'https://jwacklfxfscwcmlzmcqa.supabase.co/storage/v1/object/public/heroes/hero_9.jpg', false),
+  ('Golden Titan', 5, 'https://jwacklfxfscwcmlzmcqa.supabase.co/storage/v1/object/public/heroes/hero_9.jpg', false);
 
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS trigger
