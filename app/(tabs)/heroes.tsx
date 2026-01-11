@@ -188,18 +188,21 @@ export default function HeroesScreen() {
               </ImageBackground>
             </TouchableOpacity>
             {filteredStacks.map(stack => (
-                <TouchableOpacity key={stack.hero_id} style={[styles.heroCard, { borderColor: stack.isAnyRevealed ? stack.isAnyActive ? stack.hero.hero_rarities.color_hex : 'rgba(100, 116, 139, 0.3)' : '#FBBF24' }]} onPress={() => setSelectedStack(stack)}>
-                  {stack.isAnyActive && stack.isAnyRevealed && <View style={styles.activeBadge}><Sparkles color="#FFFFFF" size={10} /><Text style={styles.activeBadgeText}>ACTIVE</Text></View>}
+                <TouchableOpacity key={stack.hero_id} style={[styles.heroCard, { borderColor: stack.isAnyRevealed ? stack.isAnyActive ? stack.hero.hero_rarities.color_hex : 'rgba(100, 116, 139, 0.3)' : '#FBBF24' }]} onPress={() => setSelectedStack(stack)} activeOpacity={0.85}>
                   <SkeletonImage source={getHeroImageSource(stack.hero.image_url)} style={styles.heroImage} />
+                  <LinearGradient colors={['transparent', 'rgba(0,0,0,0.95)']} locations={[0.1, 1]} style={styles.heroGradient} />
                   {stack.count > 1 && <View style={styles.countBadge}><Text style={styles.countBadgeText}>{stack.count}X</Text></View>}
+                  {stack.isAnyActive && stack.isAnyRevealed && <View style={styles.activeBadge}><Sparkles color="#FFFFFF" size={10} /><Text style={styles.activeBadgeText}>ACTIVE</Text></View>}
                   <View style={styles.heroInfo}>
                     <Text style={styles.heroName} numberOfLines={1}>{stack.isAnyRevealed ? stack.hero.name : '???'}</Text>
-                    <View style={[styles.rarityBadge, { backgroundColor: stack.isAnyRevealed ? stack.hero.hero_rarities.color_hex + '20' : 'rgba(251, 191, 36, 0.2)' }]}>
-                      <Text style={[styles.rarityText, { color: stack.isAnyRevealed ? stack.hero.hero_rarities.color_hex : '#FBBF24' }]}>{stack.isAnyRevealed ? stack.hero.hero_rarities.name : '???'}</Text>
-                    </View>
-                    <View style={styles.heroStats}>
-                      <Coins color="#FBBF24" size={12} />
-                      <Text style={styles.heroStatsText}>{stack.isAnyRevealed ? `${stack.hero.hero_rarities.supercash_per_hour}/hr` : '???'}</Text>
+                    <View style={styles.heroInfoRow}>
+                      <View style={[styles.rarityBadge, { backgroundColor: stack.isAnyRevealed ? stack.hero.hero_rarities.color_hex + '25' : 'rgba(251, 191, 36, 0.2)' }]}>
+                        <Text style={[styles.rarityText, { color: stack.isAnyRevealed ? stack.hero.hero_rarities.color_hex : '#FBBF24' }]}>{stack.isAnyRevealed ? stack.hero.hero_rarities.name : '???'}</Text>
+                      </View>
+                      <View style={styles.heroStats}>
+                        <Coins color="#FBBF24" size={14} />
+                        <Text style={styles.heroStatsText}>{stack.isAnyRevealed ? `${stack.hero.hero_rarities.supercash_per_hour}/hr` : '???'}</Text>
+                      </View>
                     </View>
                   </View>
                 </TouchableOpacity>
@@ -327,19 +330,21 @@ const styles = StyleSheet.create({
   emptyTitle: { fontSize: 16, fontWeight: '700', color: '#FFFFFF', marginBottom: 6 },
   emptyText: { fontSize: 12, color: '#94A3B8', textAlign: 'center', lineHeight: 18 },
   heroesGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 20 },
-  heroCard: { width: (width - 42) / 2, height: 240, backgroundColor: 'rgba(30, 41, 59, 0.8)', borderRadius: 14, overflow: 'hidden', borderWidth: 2 },
-  countBadge: { position: 'absolute', top: 165, right: 8, zIndex: 10, backgroundColor: '#FBBF24', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.3, shadowRadius: 4, elevation: 5 },
-  countBadgeText: { fontSize: 14, fontWeight: '900', color: '#0F172A' },
-  activeBadge: { position: 'absolute', top: 6, right: 6, zIndex: 10, flexDirection: 'row', alignItems: 'center', gap: 3, backgroundColor: '#22C55E', paddingHorizontal: 6, paddingVertical: 3, borderRadius: 6 },
-  activeBadgeText: { fontSize: 8, fontWeight: '700', color: '#FFFFFF' },
-  heroImage: { width: '100%', height: 160 },
-  heroInfo: { padding: 10 },
-  heroName: { fontSize: 12, fontWeight: '700', color: '#FFFFFF', marginBottom: 6 },
-  rarityBadge: { alignSelf: 'flex-start', paddingHorizontal: 6, paddingVertical: 3, borderRadius: 5, marginBottom: 6 },
-  rarityText: { fontSize: 9, fontWeight: '700' },
-  heroStats: { flexDirection: 'row', alignItems: 'center', gap: 3 },
-  heroStatsText: { fontSize: 11, fontWeight: '600', color: '#FBBF24' },
-  mysteryCard: { width: (width - 42) / 2, height: 240, borderRadius: 14, overflow: 'hidden', borderWidth: 2, borderColor: '#FBBF24', backgroundColor: '#0F172A' },
+  heroCard: { width: (width - 42) / 2, height: 220, backgroundColor: '#0F172A', borderRadius: 16, overflow: 'hidden', borderWidth: 2, position: 'relative' },
+  heroImage: { width: '100%', height: '100%', position: 'absolute', top: 0, left: 0 },
+  heroGradient: { ...StyleSheet.absoluteFillObject },
+  countBadge: { position: 'absolute', top: 8, left: 8, zIndex: 10, backgroundColor: '#FBBF24', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 8 },
+  countBadgeText: { fontSize: 12, fontWeight: '900', color: '#0F172A' },
+  activeBadge: { position: 'absolute', top: 8, right: 8, zIndex: 10, flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#22C55E', paddingHorizontal: 8, paddingVertical: 5, borderRadius: 8 },
+  activeBadgeText: { fontSize: 9, fontWeight: '800', color: '#FFFFFF' },
+  heroInfo: { position: 'absolute', bottom: 0, left: 0, right: 0, padding: 12 },
+  heroName: { fontSize: 15, fontWeight: '800', color: '#FFFFFF', marginBottom: 8, textShadowColor: 'rgba(0,0,0,0.8)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 3 },
+  heroInfoRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  rarityBadge: { paddingHorizontal: 10, paddingVertical: 5, borderRadius: 6 },
+  rarityText: { fontSize: 11, fontWeight: '700' },
+  heroStats: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: 'rgba(251, 191, 36, 0.15)', paddingHorizontal: 8, paddingVertical: 5, borderRadius: 6 },
+  heroStatsText: { fontSize: 12, fontWeight: '700', color: '#FBBF24' },
+  mysteryCard: { width: (width - 42) / 2, height: 220, borderRadius: 16, overflow: 'hidden', borderWidth: 2, borderColor: '#FBBF24', backgroundColor: '#0F172A' },
   mysteryCardBg: { width: '100%', height: '100%' },
   mysteryCardOverlay: { ...StyleSheet.absoluteFillObject, justifyContent: 'space-between', padding: 8 },
   mysteryCardPriceBadge: { alignSelf: 'flex-end', backgroundColor: '#FBBF24', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 8 },
