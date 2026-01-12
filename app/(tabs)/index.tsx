@@ -9,7 +9,7 @@ import { useTheme } from '@/contexts/ThemeContext';
 import { Zap, TrendingUp, Clock, Coins, ChevronRight, Sparkles, Gift, Target, Layers } from 'lucide-react-native';
 import { getHeroImageSource } from '@/lib/heroImages';
 
-const { width } = Dimensions.get('window');
+const { width, height } = Dimensions.get('window');
 const backgroundImage = require('@/assets/home_bg.jpg');
 
 const formatNumber = (num: number): string => {
@@ -35,7 +35,7 @@ export default function HomeScreen() {
   const overlayColor = isDark ? 'rgba(10, 15, 30, 0.85)' : 'rgba(248, 250, 252, 0.75)';
 
   return (
-    <ImageBackground source={backgroundImage} style={{ flex: 1 }} resizeMode="cover">
+    <ImageBackground source={backgroundImage} style={{ flex: 1, width, height }} resizeMode="cover">
       <View style={{ flex: 1, backgroundColor: overlayColor }}>
         <SafeAreaView style={{ flex: 1 }}>
           <ScrollView style={{ flex: 1, paddingHorizontal: 16 }} showsVerticalScrollIndicator={false}>

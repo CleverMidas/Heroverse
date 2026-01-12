@@ -1,5 +1,7 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { View, Text, ScrollView, ActivityIndicator, RefreshControl, TouchableOpacity, ImageBackground } from 'react-native';
+import { View, Text, ScrollView, ActivityIndicator, RefreshControl, TouchableOpacity, ImageBackground, Dimensions } from 'react-native';
+
+const { width, height } = Dimensions.get('window');
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useAuth } from '@/contexts/AuthContext';
@@ -66,7 +68,7 @@ export default function LeaderboardScreen() {
 
   if (loading) {
     return (
-      <ImageBackground source={backgroundImage} style={{ flex: 1 }} resizeMode="cover">
+      <ImageBackground source={backgroundImage} style={{ flex: 1, width, height }} resizeMode="cover">
         <View style={{ flex: 1, backgroundColor: overlayColor }}>
           <SafeAreaView style={{ flex: 1, justifyContent: 'center', alignItems: 'center', gap: 16 }}>
             <ActivityIndicator size="large" color={theme.colors.primary} />
@@ -78,7 +80,7 @@ export default function LeaderboardScreen() {
   }
 
   return (
-    <ImageBackground source={backgroundImage} style={{ flex: 1 }} resizeMode="cover">
+    <ImageBackground source={backgroundImage} style={{ flex: 1, width, height }} resizeMode="cover">
       <View style={{ flex: 1, backgroundColor: overlayColor }}>
         <SafeAreaView style={{ flex: 1 }}>
           <ScrollView style={{ flex: 1, paddingHorizontal: 8, paddingTop: 6 }} showsVerticalScrollIndicator={false} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); fetchLeaderboard(timeFilter); }} tintColor={theme.colors.primary} />}>
@@ -87,7 +89,7 @@ export default function LeaderboardScreen() {
               <StatCard icon={Trophy} color={theme.colors.success} value={userRank || '-'} label="Your Rank" theme={theme} />
               <StatCard icon={Coins} color={theme.colors.purple} value={totalSC >= 1000 ? `${(totalSC/1000).toFixed(0)}K` : totalSC} label="Total SC" theme={theme} />
               <StatCard icon={Zap} color={theme.colors.info} value={top3[0]?.supercash_balance?.toLocaleString() || '-'} label="Top Score" theme={theme} />
-            </View>
+          </View>
 
             <View style={{ flexDirection: 'row', gap: 8, marginBottom: 14 }}>
               {(['all', 'weekly', 'daily'] as TimeFilter[]).map(filter => (
@@ -95,20 +97,20 @@ export default function LeaderboardScreen() {
                   <Text style={{ fontSize: 12, fontWeight: '600', color: timeFilter === filter ? theme.colors.primary : theme.colors.textMuted }}>{FILTER_LABELS[filter]}</Text>
                 </TouchableOpacity>
               ))}
-            </View>
+          </View>
 
             <Text style={{ fontSize: 11, color: theme.colors.textSecondary, textAlign: 'center', marginBottom: 12 }}>{FILTER_DESCRIPTIONS[timeFilter]}</Text>
 
-            {leaderboard.length === 0 ? (
+          {leaderboard.length === 0 ? (
               <View style={{ backgroundColor: theme.colors.card, borderRadius: 16, padding: 32, alignItems: 'center', borderWidth: 1, borderColor: theme.colors.cardBorder, marginBottom: 20 }}>
                 <Trophy color={theme.colors.textMuted} size={48} />
                 <Text style={{ fontSize: 16, fontWeight: '700', color: theme.colors.text, marginTop: 16, marginBottom: 8 }}>No Players Found</Text>
                 <Text style={{ fontSize: 12, color: theme.colors.textSecondary, textAlign: 'center' }}>
                   {timeFilter === 'daily' ? 'No players have been active today yet' : timeFilter === 'weekly' ? 'No players have been active this week' : 'No players on the leaderboard yet'}
                 </Text>
-              </View>
-            ) : (
-              <>
+            </View>
+          ) : (
+            <>
                 {top3.length >= 3 && <Top3Podium top3={top3} theme={theme} />}
                 {userRank && profile && userRank > 3 && <UserRankCard userRank={userRank} profile={profile} theme={theme} />}
                 <RankingsList entries={restOfLeaderboard} currentUserId={user?.id} theme={theme} />
@@ -124,12 +126,12 @@ export default function LeaderboardScreen() {
                   <Text style={{ fontSize: 13, fontWeight: '700', color: '#FFFFFF', marginBottom: 2 }}>Climb the Ranks</Text>
                   <Text style={{ fontSize: 10, color: 'rgba(255, 255, 255, 0.7)' }}>Earn more SuperCash to rank higher</Text>
                 </View>
-                <ChevronRight color="#FFFFFF" size={18} />
-              </LinearGradient>
-            </TouchableOpacity>
+              <ChevronRight color="#FFFFFF" size={18} />
+            </LinearGradient>
+          </TouchableOpacity>
             <View style={{ height: 24 }} />
-          </ScrollView>
-        </SafeAreaView>
+        </ScrollView>
+      </SafeAreaView>
       </View>
     </ImageBackground>
   );

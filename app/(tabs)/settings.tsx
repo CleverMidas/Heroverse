@@ -1,4 +1,6 @@
-import { View, Text, TouchableOpacity, ScrollView, Alert, Platform, Switch, Modal, TextInput, ActivityIndicator, ImageBackground } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, Alert, Platform, Switch, Modal, TextInput, ActivityIndicator, ImageBackground, Dimensions } from 'react-native';
+
+const { width, height } = Dimensions.get('window');
 import { useState, useMemo } from 'react';
 import * as Clipboard from 'expo-clipboard';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -72,7 +74,7 @@ export default function SettingsScreen() {
   ];
 
   return (
-    <ImageBackground source={backgroundImage} style={{ flex: 1 }} resizeMode="cover">
+    <ImageBackground source={backgroundImage} style={{ flex: 1, width, height }} resizeMode="cover">
       <View style={{ flex: 1, backgroundColor: overlayColor }}>
         <SafeAreaView style={{ flex: 1 }}>
           <ScrollView style={{ flex: 1, paddingHorizontal: 16, paddingTop: 12 }} showsVerticalScrollIndicator={false}>

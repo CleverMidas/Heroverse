@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image, ActivityIndicator, Modal, Dimensions, Animated, ImageSourcePropType, ImageStyle, StyleProp, ImageBackground } from 'react-native';
 
-const { width } = Dimensions.get('window');
+const { width, height } = Dimensions.get('window');
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useAuth } from '@/contexts/AuthContext';
@@ -111,7 +111,7 @@ export default function HeroesScreen() {
 
   if (loading) {
     return (
-      <ImageBackground source={backgroundImage} style={{ flex: 1 }} resizeMode="cover">
+      <ImageBackground source={backgroundImage} style={{ flex: 1, width, height }} resizeMode="cover">
         <View style={{ flex: 1, backgroundColor: isDark ? 'rgba(10, 15, 30, 0.85)' : 'rgba(248, 250, 252, 0.70)' }}>
           <SafeAreaView style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
             <ActivityIndicator size="large" color={theme.colors.primary} />
@@ -123,7 +123,7 @@ export default function HeroesScreen() {
   }
 
   return (
-    <ImageBackground source={backgroundImage} style={{ flex: 1 }} resizeMode="cover">
+    <ImageBackground source={backgroundImage} style={{ flex: 1, width, height }} resizeMode="cover">
       <View style={{ flex: 1, backgroundColor: isDark ? 'rgba(10, 15, 30, 0.85)' : 'rgba(248, 250, 252, 0.70)' }}>
         <SafeAreaView style={{ flex: 1 }}>
         {error && (
