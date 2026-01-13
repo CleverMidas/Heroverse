@@ -1,26 +1,30 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { View, Text, ScrollView, ActivityIndicator, RefreshControl, TouchableOpacity, ImageBackground, Dimensions } from 'react-native';
-
-const { width, height } = Dimensions.get('window');
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
 import { supabase } from '@/lib/supabase';
-import { Trophy, Medal, Crown, Coins, TrendingUp, Users, Zap, ChevronRight } from 'lucide-react-native';
+import { Trophy, Crown, Coins, Users, Zap, ChevronRight } from 'lucide-react-native';
 import { Profile } from '@/types/database';
 
+const { width, height } = Dimensions.get('window');
 const backgroundImage = require('@/assets/home_bg.jpg');
 
-interface LeaderboardEntry extends Profile { rank: number }
+interface LeaderboardEntry extends Profile { rank: number; hourly_rate: number; owned_heroes: number }
 type TimeFilter = 'all' | 'weekly' | 'daily';
 
 const FILTER_LABELS: Record<TimeFilter, string> = { all: 'All Time', weekly: 'Weekly', daily: 'Daily' };
 const FILTER_DESCRIPTIONS: Record<TimeFilter, string> = { all: 'All time rankings', weekly: 'Active this week', daily: 'Active today' };
 
-const getRankColor = (rank: number) => rank === 1 ? '#FFD700' : rank === 2 ? '#C0C0C0' : rank === 3 ? '#CD7F32' : '#64748B';
-const getRankBgColor = (rank: number) => rank <= 3 ? `${getRankColor(rank)}1A` : 'transparent';
-const getRankBorderColor = (rank: number) => rank <= 3 ? `${getRankColor(rank)}4D` : 'transparent';
+const formatShortNumber = (num: number): string => {
+  if (num >= 1_000_000_000) return `${(num / 1_000_000_000).toFixed(1).replace(/\.0$/, '')}B`;
+  if (num >= 1_000_000) return `${(num / 1_000_000).toFixed(1).replace(/\.0$/, '')}M`;
+  if (num >= 1_000) return `${(num / 1_000).toFixed(1).replace(/\.0$/, '')}K`;
+  return num.toString();
+};
+
+const formatCompactNumber = (num: number): string => num < 100_000 ? num.toLocaleString() : formatShortNumber(num);
 
 export default function LeaderboardScreen() {
   const { user, profile } = useAuth();
@@ -46,7 +50,25 @@ export default function LeaderboardScreen() {
       const { data, error } = await query;
       if (error) throw error;
       if (data) {
-        const rankedData = (data as Profile[]).map((entry, index) => ({ ...entry, rank: index + 1 }));
+        const userIds = (data as Profile[]).map(p => p.id);
+        const [{ data: activeHeroData }, { data: ownedHeroData }] = await Promise.all([
+          supabase.from('user_heroes').select('user_id, heroes!inner(hero_rarities!inner(supercash_per_hour))').in('user_id', userIds).eq('is_active', true),
+          supabase.from('user_heroes').select('user_id').in('user_id', userIds)
+        ]);
+        const hourlyRates: Record<string, number> = {};
+        const ownedHeroesCount: Record<string, number> = {};
+        activeHeroData?.forEach((h: any) => {
+          hourlyRates[h.user_id] = (hourlyRates[h.user_id] || 0) + (h.heroes?.hero_rarities?.supercash_per_hour || 0);
+        });
+        ownedHeroData?.forEach((h: any) => {
+          ownedHeroesCount[h.user_id] = (ownedHeroesCount[h.user_id] || 0) + 1;
+        });
+        const rankedData = (data as Profile[]).map((entry, index) => ({
+          ...entry,
+          rank: index + 1,
+          hourly_rate: hourlyRates[entry.id] || 0,
+          owned_heroes: ownedHeroesCount[entry.id] || 0
+        }));
         setLeaderboard(rankedData);
         setUserRank(user ? rankedData.find(e => e.id === user.id)?.rank ?? null : null);
       }
@@ -57,11 +79,10 @@ export default function LeaderboardScreen() {
   useEffect(() => { fetchLeaderboard(); }, [user]);
   useEffect(() => { setLoading(true); fetchLeaderboard(timeFilter); }, [timeFilter]);
 
-  const { top3, restOfLeaderboard, totalPlayers, totalSC } = useMemo(() => ({
-    top3: leaderboard.slice(0, 3),
-    restOfLeaderboard: leaderboard.slice(3),
+  const { totalPlayers, totalSC, topScore } = useMemo(() => ({
     totalPlayers: leaderboard.length,
     totalSC: leaderboard.reduce((sum, e) => sum + e.supercash_balance, 0),
+    topScore: leaderboard[0]?.supercash_balance || 0,
   }), [leaderboard]);
 
   const overlayColor = isDark ? 'rgba(10, 15, 30, 0.88)' : 'rgba(248, 250, 252, 0.75)';
@@ -87,36 +108,28 @@ export default function LeaderboardScreen() {
             <View style={{ flexDirection: 'row', gap: 8, marginBottom: 12 }}>
               <StatCard icon={Users} color={theme.colors.primary} value={totalPlayers} label="Players" theme={theme} />
               <StatCard icon={Trophy} color={theme.colors.success} value={userRank || '-'} label="Your Rank" theme={theme} />
-              <StatCard icon={Coins} color={theme.colors.purple} value={totalSC >= 1000 ? `${(totalSC/1000).toFixed(0)}K` : totalSC} label="Total SC" theme={theme} />
-              <StatCard icon={Zap} color={theme.colors.info} value={top3[0]?.supercash_balance?.toLocaleString() || '-'} label="Top Score" theme={theme} />
-          </View>
-
+              <StatCard icon={Coins} color={theme.colors.purple} value={totalSC >= 1000 ? `${(totalSC / 1000).toFixed(0)}K` : totalSC} label="Total SC" theme={theme} />
+              <StatCard icon={Zap} color={theme.colors.info} value={topScore?.toLocaleString() || '-'} label="Top Score" theme={theme} />
+            </View>
             <View style={{ flexDirection: 'row', gap: 8, marginBottom: 14 }}>
               {(['all', 'weekly', 'daily'] as TimeFilter[]).map(filter => (
-                <TouchableOpacity key={filter} style={{ flex: 1, paddingVertical: 10, paddingHorizontal: 8, backgroundColor: timeFilter === filter ? 'rgba(251, 191, 36, 0.15)' : theme.colors.card, borderRadius: 10, alignItems: 'center', borderWidth: 1, borderColor: timeFilter === filter ? theme.colors.primary : theme.colors.cardBorder }} onPress={() => setTimeFilter(filter)}>
+                <TouchableOpacity key={filter} onPress={() => setTimeFilter(filter)} style={{ flex: 1, paddingVertical: 10, paddingHorizontal: 8, backgroundColor: timeFilter === filter ? 'rgba(251, 191, 36, 0.15)' : theme.colors.card, borderRadius: 10, alignItems: 'center', borderWidth: 1, borderColor: timeFilter === filter ? theme.colors.primary : theme.colors.cardBorder }}>
                   <Text style={{ fontSize: 12, fontWeight: '600', color: timeFilter === filter ? theme.colors.primary : theme.colors.textMuted }}>{FILTER_LABELS[filter]}</Text>
                 </TouchableOpacity>
               ))}
-          </View>
-
+            </View>
             <Text style={{ fontSize: 11, color: theme.colors.textSecondary, textAlign: 'center', marginBottom: 12 }}>{FILTER_DESCRIPTIONS[timeFilter]}</Text>
-
-          {leaderboard.length === 0 ? (
+            {leaderboard.length === 0 ? (
               <View style={{ backgroundColor: theme.colors.card, borderRadius: 16, padding: 32, alignItems: 'center', borderWidth: 1, borderColor: theme.colors.cardBorder, marginBottom: 20 }}>
                 <Trophy color={theme.colors.textMuted} size={48} />
                 <Text style={{ fontSize: 16, fontWeight: '700', color: theme.colors.text, marginTop: 16, marginBottom: 8 }}>No Players Found</Text>
                 <Text style={{ fontSize: 12, color: theme.colors.textSecondary, textAlign: 'center' }}>
                   {timeFilter === 'daily' ? 'No players have been active today yet' : timeFilter === 'weekly' ? 'No players have been active this week' : 'No players on the leaderboard yet'}
                 </Text>
-            </View>
-          ) : (
-            <>
-                {top3.length >= 3 && <Top3Podium top3={top3} theme={theme} />}
-                {userRank && profile && userRank > 3 && <UserRankCard userRank={userRank} profile={profile} theme={theme} />}
-                <RankingsList entries={restOfLeaderboard} currentUserId={user?.id} theme={theme} />
-              </>
+              </View>
+            ) : (
+              <GoldenLeaderboard entries={leaderboard} currentUserId={user?.id} />
             )}
-
             <TouchableOpacity style={{ borderRadius: 12, overflow: 'hidden', marginBottom: 8 }}>
               <LinearGradient colors={['rgba(34, 197, 94, 0.3)', 'rgba(22, 163, 74, 0.3)']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ padding: 14, flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: 'rgba(34, 197, 94, 0.3)', borderRadius: 12 }}>
                 <View style={{ width: 40, height: 40, borderRadius: 10, backgroundColor: 'rgba(255, 255, 255, 0.15)', justifyContent: 'center', alignItems: 'center', marginRight: 12 }}>
@@ -126,12 +139,12 @@ export default function LeaderboardScreen() {
                   <Text style={{ fontSize: 13, fontWeight: '700', color: '#FFFFFF', marginBottom: 2 }}>Climb the Ranks</Text>
                   <Text style={{ fontSize: 10, color: 'rgba(255, 255, 255, 0.7)' }}>Earn more SuperCash to rank higher</Text>
                 </View>
-              <ChevronRight color="#FFFFFF" size={18} />
-            </LinearGradient>
-          </TouchableOpacity>
+                <ChevronRight color="#FFFFFF" size={18} />
+              </LinearGradient>
+            </TouchableOpacity>
             <View style={{ height: 24 }} />
-        </ScrollView>
-      </SafeAreaView>
+          </ScrollView>
+        </SafeAreaView>
       </View>
     </ImageBackground>
   );
@@ -147,71 +160,56 @@ const StatCard = ({ icon: Icon, color, value, label, theme }: { icon: any; color
   </View>
 );
 
-const Top3Podium = ({ top3, theme }: { top3: LeaderboardEntry[]; theme: any }) => (
-  <View style={{ flexDirection: 'row', justifyContent: 'center', alignItems: 'flex-end', marginBottom: 16, paddingHorizontal: 8 }}>
-    <PodiumItem entry={top3[1]} rank={2} icon={Medal} color="#C0C0C0" size={48} iconSize={24} height={44} theme={theme} />
-    <PodiumItem entry={top3[0]} rank={1} icon={Crown} color="#FFD700" size={56} iconSize={28} height={60} isFirst theme={theme} />
-    <PodiumItem entry={top3[2]} rank={3} icon={Medal} color="#CD7F32" size={48} iconSize={24} height={32} theme={theme} />
-  </View>
-);
-
-const PodiumItem = ({ entry, rank, icon: Icon, color, size, iconSize, height, isFirst, theme }: { entry: LeaderboardEntry; rank: number; icon: any; color: string; size: number; iconSize: number; height: number; isFirst?: boolean; theme: any }) => (
-  <View style={{ flex: 1, alignItems: 'center', marginHorizontal: 4, marginBottom: isFirst ? 12 : 0 }}>
-    <View style={{ width: size, height: size, borderRadius: size / 2, justifyContent: 'center', alignItems: 'center', marginBottom: 6, backgroundColor: `${color}33`, borderWidth: 2, borderColor: color }}>
-      <Icon color={color} size={iconSize} />
+const GoldenLeaderboard = ({ entries, currentUserId }: { entries: LeaderboardEntry[]; currentUserId?: string }) => (
+  <View style={{ marginBottom: 18, borderWidth: 3, borderColor: '#D4A54A', borderRadius: 16, backgroundColor: 'rgba(20, 20, 35, 0.95)', padding: 12, shadowColor: '#FFD700', shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.3, shadowRadius: 12, elevation: 8 }}>
+    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginBottom: 14, paddingVertical: 8 }}>
+      <Crown color="#FFD700" size={24} style={{ marginRight: 10 }} />
+      <Text style={{ fontSize: 20, fontWeight: '900', color: '#FFD700', letterSpacing: 2, textShadowColor: 'rgba(255, 215, 0, 0.5)', textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 10 }}>LEADERBOARD</Text>
     </View>
-    <Text style={{ fontSize: isFirst ? 14 : 12, fontWeight: '800', color: isFirst ? color : theme.colors.textSecondary }}>#{rank}</Text>
-    <Text style={{ fontSize: isFirst ? 12 : 11, fontWeight: isFirst ? '700' : '600', color: theme.colors.text, marginTop: 2, maxWidth: 80, textAlign: 'center' }} numberOfLines={1}>{entry?.username || 'Anonymous'}</Text>
-    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3, marginTop: 4 }}>
-      <Coins color={theme.colors.primary} size={10} />
-      <Text style={{ fontSize: 10, fontWeight: '600', color: theme.colors.primary }}>{(entry?.supercash_balance || 0).toLocaleString()}</Text>
-    </View>
-    <View style={{ width: '100%', borderRadius: 6, marginTop: 8, height, backgroundColor: `${color}4D` }} />
-  </View>
-);
-
-const UserRankCard = ({ userRank, profile, theme }: { userRank: number; profile: Profile; theme: any }) => (
-  <View style={{ backgroundColor: 'rgba(251, 191, 36, 0.1)', borderRadius: 12, padding: 14, marginBottom: 16, borderWidth: 1, borderColor: 'rgba(251, 191, 36, 0.3)', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-      <View style={{ backgroundColor: 'rgba(251, 191, 36, 0.2)', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8 }}>
-        <Text style={{ fontSize: 14, fontWeight: '800', color: theme.colors.primary }}>#{userRank}</Text>
-      </View>
-      <View style={{ gap: 2 }}>
-        <Text style={{ fontSize: 14, fontWeight: '700', color: theme.colors.text }}>{profile.username || 'Anonymous'}</Text>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-          <Coins color={theme.colors.primary} size={14} />
-          <Text style={{ fontSize: 12, fontWeight: '600', color: theme.colors.primary }}>{profile.supercash_balance.toLocaleString()}</Text>
-        </View>
-      </View>
-    </View>
-    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-      <TrendingUp color={theme.colors.success} size={16} />
-      <Text style={{ fontSize: 12, fontWeight: '700', color: theme.colors.success }}>You</Text>
-    </View>
-  </View>
-);
-
-const RankingsList = ({ entries, currentUserId, theme }: { entries: LeaderboardEntry[]; currentUserId?: string; theme: any }) => (
-  <View style={{ marginBottom: 18 }}>
-    <Text style={{ fontSize: 15, fontWeight: '700', color: theme.colors.text, marginBottom: 10 }}>Rankings</Text>
     <View style={{ gap: 8 }}>
-      {entries.map(entry => {
+      {entries.map((entry) => {
         const isCurrentUser = currentUserId === entry.id;
+        const isTop3 = entry.rank <= 3;
+        const rankColor = entry.rank === 1 ? '#FFD700' : entry.rank === 2 ? '#C0C0C0' : entry.rank === 3 ? '#CD7F32' : '#8B7355';
         return (
-          <View key={entry.id} style={{ backgroundColor: isCurrentUser ? 'rgba(251, 191, 36, 0.15)' : getRankBgColor(entry.rank), borderColor: isCurrentUser ? 'rgba(251, 191, 36, 0.4)' : getRankBorderColor(entry.rank) || theme.colors.cardBorder, borderWidth: isCurrentUser ? 2 : 1, borderRadius: 12, padding: 12, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
-              <View style={{ width: 40, height: 40, borderRadius: 10, justifyContent: 'center', alignItems: 'center', marginRight: 10, backgroundColor: entry.rank <= 3 ? `${getRankColor(entry.rank)}33` : theme.colors.surfaceSecondary }}>
-                <Text style={{ fontSize: 12, fontWeight: '800', color: getRankColor(entry.rank) }}>#{entry.rank}</Text>
+          <View key={entry.id} style={{ overflow: 'hidden', borderRadius: 25 }}>
+            <LinearGradient colors={isCurrentUser ? ['#FFD700', '#FFA500', '#CC8400'] : ['#D4A54A', '#B8860B', '#8B6914']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 10, paddingHorizontal: 8, borderRadius: 25, borderWidth: isCurrentUser ? 2 : 1, borderColor: isCurrentUser ? '#FFD700' : '#8B6914' }}>
+              <View style={{ width: 28, minWidth: 28, alignItems: 'center', marginRight: 6 }}>
+                {isTop3 ? (
+                  <View style={{ width: 24, height: 24, borderRadius: 12, backgroundColor: rankColor, justifyContent: 'center', alignItems: 'center', borderWidth: 2, borderColor: '#FFF', shadowColor: rankColor, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.8, shadowRadius: 4 }}>
+                    <Text style={{ fontSize: 11, fontWeight: '900', color: entry.rank === 2 ? '#333' : '#FFF' }}>{entry.rank}</Text>
+                  </View>
+                ) : (
+                  <Text style={{ fontSize: 14, fontWeight: '800', color: '#4A3728' }}>{entry.rank}</Text>
+                )}
               </View>
-              <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                <Text style={{ fontSize: 13, fontWeight: '600', color: isCurrentUser ? theme.colors.primary : theme.colors.text, flex: 1 }} numberOfLines={1}>{entry.username || 'Anonymous'}</Text>
-                {isCurrentUser && <Text style={{ fontSize: 10, fontWeight: '700', color: theme.colors.primary, backgroundColor: 'rgba(251, 191, 36, 0.2)', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 }}>You</Text>}
+              <View style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: isTop3 ? rankColor : '#6B5344', justifyContent: 'center', alignItems: 'center', marginRight: 10, borderWidth: 2, borderColor: '#FFF' }}>
+                <Text style={{ fontSize: 14, fontWeight: '800', color: entry.rank === 2 ? '#333' : '#FFF' }}>{(entry.username || 'A')[0].toUpperCase()}</Text>
               </View>
-            </View>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: 'rgba(251, 191, 36, 0.1)', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 }}>
-              <Coins color={theme.colors.primary} size={12} />
-              <Text style={{ fontSize: 12, fontWeight: '700', color: theme.colors.primary }}>{entry.supercash_balance.toLocaleString()}</Text>
-            </View>
+              <View style={{ flex: 1, justifyContent: 'center' }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                  <Text style={{ fontSize: 13, fontWeight: '800', color: '#3D2914', textTransform: 'uppercase' }} numberOfLines={1}>{entry.username || 'Anonymous'}</Text>
+                  {isCurrentUser && (
+                    <View style={{ backgroundColor: '#DC2626', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6, borderWidth: 1, borderColor: '#FFF' }}>
+                      <Text style={{ fontSize: 9, fontWeight: '900', color: '#FFF' }}>YOU</Text>
+                    </View>
+                  )}
+                </View>
+                <Text style={{ fontSize: 10, fontWeight: '600', color: '#5D4A3A', marginTop: 2 }}>🏆 {entry.owned_heroes} hero{entry.owned_heroes !== 1 ? 's' : ''}</Text>
+              </View>
+              <View style={{ width: 75, alignItems: 'center', marginRight: 6 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(34, 197, 94, 0.25)', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 12 }}>
+                  <Zap color="#15803D" size={11} />
+                  <Text style={{ fontSize: 11, fontWeight: '900', color: '#15803D', marginLeft: 3 }}>+{formatShortNumber(entry.hourly_rate)}/hr</Text>
+                </View>
+              </View>
+              <View style={{ width: 80, alignItems: 'flex-end' }}>
+                <View style={{ backgroundColor: 'rgba(61, 41, 20, 0.3)', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12, flexDirection: 'row', alignItems: 'center' }}>
+                  <Coins color="#3D2914" size={12} />
+                  <Text style={{ fontSize: 13, fontWeight: '900', color: '#3D2914', marginLeft: 4 }}>{formatCompactNumber(entry.supercash_balance)}</Text>
+                </View>
+              </View>
+            </LinearGradient>
           </View>
         );
       })}
