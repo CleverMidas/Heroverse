@@ -47,10 +47,9 @@ export default function HomeScreen() {
                     <Text style={{ fontSize: 15, fontWeight: '800', color: '#78350F', letterSpacing: 2 }}>TOTAL </Text>
                     <Text style={{ fontSize: 15, fontWeight: '800', color: '#1C1917', letterSpacing: 2 }}>BALANCE</Text>
                   </View>
-                  <View style={{ flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'center', marginBottom: 20 }}>
-                    <Text style={{ fontSize: 24, fontWeight: '400', color: '#78350F', marginTop: 6, marginRight: 2 }}>$</Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'baseline', justifyContent: 'center', marginBottom: 20 }}>
                     <Text style={{ fontSize: 48, fontWeight: '800', color: '#1C1917', letterSpacing: -1 }}>{balance}</Text>
-                    <Text style={{ fontSize: 14, fontWeight: '600', color: 'rgba(0, 0, 0, 0.4)', marginTop: 10, marginLeft: 6 }}>SC</Text>
+                    <Text style={{ fontSize: 22, fontWeight: '800', color: '#92400E', marginLeft: 8 }}>SC</Text>
                   </View>
                   <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
                     <StatItem icon={TrendingUp} color="#166534" value={`+${formatNumber(totalEarningRate)}`} label="/hr" />
