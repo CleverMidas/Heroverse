@@ -4,6 +4,7 @@ import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image, ActivityIn
 const { width, height } = Dimensions.get('window');
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useLocalSearchParams } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
 import { useGame } from '@/contexts/GameContext';
 import { useTheme } from '@/contexts/ThemeContext';
@@ -48,6 +49,7 @@ export default function HeroesScreen() {
   const { profile } = useAuth();
   const { stackedHeroes, allHeroes, claimFreeHero, activateAllCopies, deactivateAllCopies, purchaseMysteryBox, loading, error } = useGame();
   const { theme, isDark } = useTheme();
+  const { openMystery } = useLocalSearchParams<{ openMystery?: string }>();
   const [claiming, setClaiming] = useState(false);
   const [activating, setActivating] = useState<string | null>(null);
   const [deactivating, setDeactivating] = useState<string | null>(null);
@@ -57,6 +59,12 @@ export default function HeroesScreen() {
   const [showMysteryModal, setShowMysteryModal] = useState(false);
   const [purchasingMystery, setPurchasingMystery] = useState(false);
   const [revealedHero, setRevealedHero] = useState<HeroWithRarity | null>(null);
+
+  useEffect(() => {
+    if (openMystery === 'true') {
+      setShowMysteryModal(true);
+    }
+  }, [openMystery]);
 
   const starterHero = allHeroes.find(h => h.is_starter);
   const canClaimFreeHero = !profile?.has_claimed_free_hero && starterHero;

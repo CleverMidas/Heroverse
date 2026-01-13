@@ -1,11 +1,12 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { View, Text, ScrollView, ActivityIndicator, RefreshControl, TouchableOpacity, ImageBackground, Dimensions } from 'react-native';
+import { View, Text, ScrollView, ActivityIndicator, RefreshControl, TouchableOpacity, ImageBackground, Dimensions, Modal } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useRouter } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
 import { supabase } from '@/lib/supabase';
-import { Trophy, Crown, Coins, Users, Zap, ChevronRight } from 'lucide-react-native';
+import { Trophy, Crown, Coins, Users, Zap, ChevronRight, X, Sparkles, Layers, TrendingUp } from 'lucide-react-native';
 import { Profile } from '@/types/database';
 
 const { width, height } = Dimensions.get('window');
@@ -29,11 +30,22 @@ const formatCompactNumber = (num: number): string => num < 100_000 ? num.toLocal
 export default function LeaderboardScreen() {
   const { user, profile } = useAuth();
   const { theme, isDark } = useTheme();
+  const router = useRouter();
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
   const [userRank, setUserRank] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [timeFilter, setTimeFilter] = useState<TimeFilter>('all');
+  const [showTipsModal, setShowTipsModal] = useState(false);
+
+  const handleTipPress = useCallback((action: TipAction) => {
+    setShowTipsModal(false);
+    if (action === 'heroes') {
+      router.push('/(tabs)/heroes');
+    } else if (action === 'mystery') {
+      router.push({ pathname: '/(tabs)/heroes', params: { openMystery: 'true' } });
+    }
+  }, [router]);
 
   const getTimeFilterDate = useCallback((filter: TimeFilter): string | null => {
     if (filter === 'all') return null;
@@ -130,7 +142,7 @@ export default function LeaderboardScreen() {
             ) : (
               <GoldenLeaderboard entries={leaderboard} currentUserId={user?.id} />
             )}
-            <TouchableOpacity style={{ borderRadius: 12, overflow: 'hidden', marginBottom: 8 }}>
+            <TouchableOpacity style={{ borderRadius: 12, overflow: 'hidden', marginBottom: 8 }} onPress={() => setShowTipsModal(true)}>
               <LinearGradient colors={['rgba(34, 197, 94, 0.3)', 'rgba(22, 163, 74, 0.3)']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ padding: 14, flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: 'rgba(34, 197, 94, 0.3)', borderRadius: 12 }}>
                 <View style={{ width: 40, height: 40, borderRadius: 10, backgroundColor: 'rgba(255, 255, 255, 0.15)', justifyContent: 'center', alignItems: 'center', marginRight: 12 }}>
                   <Trophy color="#FFFFFF" size={22} />
@@ -144,6 +156,7 @@ export default function LeaderboardScreen() {
             </TouchableOpacity>
             <View style={{ height: 24 }} />
           </ScrollView>
+          <RankUpTipsModal visible={showTipsModal} onClose={() => setShowTipsModal(false)} onTipPress={handleTipPress} theme={theme} />
         </SafeAreaView>
       </View>
     </ImageBackground>
@@ -158,6 +171,51 @@ const StatCard = ({ icon: Icon, color, value, label, theme }: { icon: any; color
     <Text style={{ fontSize: 16, fontWeight: '700', color: theme.colors.text }}>{value}</Text>
     <Text style={{ fontSize: 9, color: theme.colors.textSecondary }}>{label}</Text>
   </View>
+);
+
+type TipAction = 'heroes' | 'mystery';
+const RANK_UP_TIPS: { icon: any; color: string; title: string; description: string; action: TipAction }[] = [
+  { icon: Zap, color: '#22C55E', title: 'Activate Heroes', description: 'Active heroes earn SuperCash every hour. More active heroes = faster earnings!', action: 'heroes' },
+  { icon: Sparkles, color: '#8B5CF6', title: 'Get Rare Heroes', description: 'Higher rarity heroes earn more SC/hr. Open Mystery Boxes for a chance at legendary heroes!', action: 'mystery' },
+  { icon: Layers, color: '#3B82F6', title: 'Stack Duplicates', description: 'Duplicate heroes stack and multiply your earnings. Each copy adds to your hourly rate!', action: 'mystery' },
+];
+
+const RankUpTipsModal = ({ visible, onClose, onTipPress, theme }: { visible: boolean; onClose: () => void; onTipPress: (action: TipAction) => void; theme: any }) => (
+  <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+    <View style={{ flex: 1, backgroundColor: theme.colors.overlay, justifyContent: 'center', alignItems: 'center', padding: 20 }}>
+      <View style={{ backgroundColor: theme.colors.modalBackground, borderRadius: 20, padding: 24, width: '100%', maxWidth: 340, borderWidth: 2, borderColor: 'rgba(34, 197, 94, 0.3)' }}>
+        <TouchableOpacity style={{ position: 'absolute', top: 12, right: 12, zIndex: 10, padding: 6 }} onPress={onClose}>
+          <X color={theme.colors.textSecondary} size={24} />
+        </TouchableOpacity>
+        <View style={{ alignItems: 'center', marginBottom: 20 }}>
+          <View style={{ width: 64, height: 64, borderRadius: 20, backgroundColor: 'rgba(34, 197, 94, 0.15)', justifyContent: 'center', alignItems: 'center', marginBottom: 12 }}>
+            <TrendingUp color="#22C55E" size={32} />
+          </View>
+          <Text style={{ fontSize: 22, fontWeight: '800', color: theme.colors.text, marginBottom: 4 }}>How to Rank Up</Text>
+          <Text style={{ fontSize: 12, color: theme.colors.textSecondary, textAlign: 'center' }}>Follow these tips to climb the leaderboard!</Text>
+        </View>
+        <View style={{ gap: 12 }}>
+          {RANK_UP_TIPS.map((tip, index) => (
+            <TouchableOpacity key={index} onPress={() => onTipPress(tip.action)} style={{ flexDirection: 'row', backgroundColor: theme.colors.surfaceSecondary, borderRadius: 14, padding: 14, borderWidth: 1, borderColor: theme.colors.cardBorder }}>
+              <View style={{ width: 44, height: 44, borderRadius: 12, backgroundColor: `${tip.color}20`, justifyContent: 'center', alignItems: 'center', marginRight: 12 }}>
+                <tip.icon color={tip.color} size={22} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontSize: 14, fontWeight: '700', color: theme.colors.text, marginBottom: 4 }}>{tip.title}</Text>
+                <Text style={{ fontSize: 11, color: theme.colors.textSecondary, lineHeight: 16 }}>{tip.description}</Text>
+              </View>
+              <View style={{ justifyContent: 'center' }}>
+                <ChevronRight color={theme.colors.textSecondary} size={18} />
+              </View>
+            </TouchableOpacity>
+          ))}
+        </View>
+        <TouchableOpacity style={{ marginTop: 20, backgroundColor: '#22C55E', borderRadius: 12, paddingVertical: 14, alignItems: 'center' }} onPress={onClose}>
+          <Text style={{ fontSize: 15, fontWeight: '700', color: '#FFFFFF' }}>Got it!</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  </Modal>
 );
 
 const GoldenLeaderboard = ({ entries, currentUserId }: { entries: LeaderboardEntry[]; currentUserId?: string }) => (
