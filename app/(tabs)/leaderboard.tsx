@@ -164,13 +164,7 @@ export default function LeaderboardScreen() {
 }
 
 const StatCard = ({ icon: Icon, color, value, label, theme }: { icon: any; color: string; value: string | number; label: string; theme: any }) => (
-  <View style={{ flex: 1, backgroundColor: theme.colors.card, borderRadius: 12, padding: 10, alignItems: 'center', borderWidth: 1, borderColor: color }}>
-    <View style={{ width: 28, height: 28, borderRadius: 8, backgroundColor: `${color}20`, justifyContent: 'center', alignItems: 'center', marginBottom: 4 }}>
-      <Icon color={color} size={16} />
-    </View>
-    <Text style={{ fontSize: 16, fontWeight: '700', color: theme.colors.text }}>{value}</Text>
-    <Text style={{ fontSize: 9, color: theme.colors.textSecondary }}>{label}</Text>
-  </View>
+  <View style={{ flex: 1, backgroundColor: theme.colors.card, borderRadius: 12, padding: 10, alignItems: 'center', borderWidth: 1, borderColor: color }}><View style={{ width: 28, height: 28, borderRadius: 8, backgroundColor: `${color}20`, justifyContent: 'center', alignItems: 'center', marginBottom: 4 }}><Icon color={color} size={16} /></View><Text style={{ fontSize: 16, fontWeight: '700', color: theme.colors.text }}>{value}</Text><Text style={{ fontSize: 9, color: theme.colors.textSecondary }}>{label}</Text></View>
 );
 
 type TipAction = 'heroes' | 'mystery';
@@ -182,48 +176,13 @@ const RANK_UP_TIPS: { icon: any; color: string; title: string; description: stri
 
 const RankUpTipsModal = ({ visible, onClose, onTipPress, theme }: { visible: boolean; onClose: () => void; onTipPress: (action: TipAction) => void; theme: any }) => (
   <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
-    <View style={{ flex: 1, backgroundColor: theme.colors.overlay, justifyContent: 'center', alignItems: 'center', padding: 20 }}>
-      <View style={{ backgroundColor: theme.colors.modalBackground, borderRadius: 20, padding: 24, width: '100%', maxWidth: 340, borderWidth: 2, borderColor: 'rgba(34, 197, 94, 0.3)' }}>
-        <TouchableOpacity style={{ position: 'absolute', top: 12, right: 12, zIndex: 10, padding: 6 }} onPress={onClose}>
-          <X color={theme.colors.textSecondary} size={24} />
-        </TouchableOpacity>
-        <View style={{ alignItems: 'center', marginBottom: 20 }}>
-          <View style={{ width: 64, height: 64, borderRadius: 20, backgroundColor: 'rgba(34, 197, 94, 0.15)', justifyContent: 'center', alignItems: 'center', marginBottom: 12 }}>
-            <TrendingUp color="#22C55E" size={32} />
-          </View>
-          <Text style={{ fontSize: 22, fontWeight: '800', color: theme.colors.text, marginBottom: 4 }}>How to Rank Up</Text>
-          <Text style={{ fontSize: 12, color: theme.colors.textSecondary, textAlign: 'center' }}>Follow these tips to climb the leaderboard!</Text>
-        </View>
-        <View style={{ gap: 12 }}>
-          {RANK_UP_TIPS.map((tip, index) => (
-            <TouchableOpacity key={index} onPress={() => onTipPress(tip.action)} style={{ flexDirection: 'row', backgroundColor: theme.colors.surfaceSecondary, borderRadius: 14, padding: 14, borderWidth: 1, borderColor: theme.colors.cardBorder }}>
-              <View style={{ width: 44, height: 44, borderRadius: 12, backgroundColor: `${tip.color}20`, justifyContent: 'center', alignItems: 'center', marginRight: 12 }}>
-                <tip.icon color={tip.color} size={22} />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={{ fontSize: 14, fontWeight: '700', color: theme.colors.text, marginBottom: 4 }}>{tip.title}</Text>
-                <Text style={{ fontSize: 11, color: theme.colors.textSecondary, lineHeight: 16 }}>{tip.description}</Text>
-              </View>
-              <View style={{ justifyContent: 'center' }}>
-                <ChevronRight color={theme.colors.textSecondary} size={18} />
-              </View>
-            </TouchableOpacity>
-          ))}
-        </View>
-        <TouchableOpacity style={{ marginTop: 20, backgroundColor: '#22C55E', borderRadius: 12, paddingVertical: 14, alignItems: 'center' }} onPress={onClose}>
-          <Text style={{ fontSize: 15, fontWeight: '700', color: '#FFFFFF' }}>Got it!</Text>
-        </TouchableOpacity>
-      </View>
-    </View>
+    <View style={{ flex: 1, backgroundColor: theme.colors.overlay, justifyContent: 'center', alignItems: 'center', padding: 20 }}><View style={{ backgroundColor: theme.colors.modalBackground, borderRadius: 20, padding: 24, width: '100%', maxWidth: 340, borderWidth: 2, borderColor: 'rgba(34, 197, 94, 0.3)' }}><TouchableOpacity style={{ position: 'absolute', top: 12, right: 12, zIndex: 10, padding: 6 }} onPress={onClose}><X color={theme.colors.textSecondary} size={24} /></TouchableOpacity><View style={{ alignItems: 'center', marginBottom: 20 }}><View style={{ width: 64, height: 64, borderRadius: 20, backgroundColor: 'rgba(34, 197, 94, 0.15)', justifyContent: 'center', alignItems: 'center', marginBottom: 12 }}><TrendingUp color="#22C55E" size={32} /></View><Text style={{ fontSize: 22, fontWeight: '800', color: theme.colors.text, marginBottom: 4 }}>How to Rank Up</Text><Text style={{ fontSize: 12, color: theme.colors.textSecondary, textAlign: 'center' }}>Follow these tips to climb the leaderboard!</Text></View><View style={{ gap: 12 }}>{RANK_UP_TIPS.map((tip, index) => (<TouchableOpacity key={index} onPress={() => onTipPress(tip.action)} style={{ flexDirection: 'row', backgroundColor: theme.colors.surfaceSecondary, borderRadius: 14, padding: 14, borderWidth: 1, borderColor: theme.colors.cardBorder }}><View style={{ width: 44, height: 44, borderRadius: 12, backgroundColor: `${tip.color}20`, justifyContent: 'center', alignItems: 'center', marginRight: 12 }}><tip.icon color={tip.color} size={22} /></View><View style={{ flex: 1 }}><Text style={{ fontSize: 14, fontWeight: '700', color: theme.colors.text, marginBottom: 4 }}>{tip.title}</Text><Text style={{ fontSize: 11, color: theme.colors.textSecondary, lineHeight: 16 }}>{tip.description}</Text></View><View style={{ justifyContent: 'center' }}><ChevronRight color={theme.colors.textSecondary} size={18} /></View></TouchableOpacity>))}</View><TouchableOpacity style={{ marginTop: 20, backgroundColor: '#22C55E', borderRadius: 12, paddingVertical: 14, alignItems: 'center' }} onPress={onClose}><Text style={{ fontSize: 15, fontWeight: '700', color: '#FFFFFF' }}>Got it!</Text></TouchableOpacity></View></View>
   </Modal>
 );
 
 const GoldenLeaderboard = ({ entries, currentUserId }: { entries: LeaderboardEntry[]; currentUserId?: string }) => (
   <View style={{ marginBottom: 18, borderWidth: 3, borderColor: '#D4A54A', borderRadius: 16, backgroundColor: 'rgba(20, 20, 35, 0.95)', padding: 12, shadowColor: '#FFD700', shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.3, shadowRadius: 12, elevation: 8 }}>
-    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginBottom: 14, paddingVertical: 8 }}>
-      <Crown color="#FFD700" size={24} style={{ marginRight: 10 }} />
-      <Text style={{ fontSize: 20, fontWeight: '900', color: '#FFD700', letterSpacing: 2, textShadowColor: 'rgba(255, 215, 0, 0.5)', textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 10 }}>LEADERBOARD</Text>
-    </View>
+    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginBottom: 14, paddingVertical: 8 }}><Crown color="#FFD700" size={24} style={{ marginRight: 10 }} /><Text style={{ fontSize: 20, fontWeight: '900', color: '#FFD700', letterSpacing: 2 }}>LEADERBOARD</Text></View>
     <View style={{ gap: 8 }}>
       {entries.map((entry) => {
         const isCurrentUser = currentUserId === entry.id;
@@ -245,28 +204,11 @@ const GoldenLeaderboard = ({ entries, currentUserId }: { entries: LeaderboardEnt
                 <Text style={{ fontSize: 14, fontWeight: '800', color: entry.rank === 2 ? '#333' : '#FFF' }}>{(entry.username || 'A')[0].toUpperCase()}</Text>
               </View>
               <View style={{ flex: 1, justifyContent: 'center' }}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                  <Text style={{ fontSize: 13, fontWeight: '800', color: '#3D2914', textTransform: 'uppercase' }} numberOfLines={1}>{entry.username || 'Anonymous'}</Text>
-                  {isCurrentUser && (
-                    <View style={{ backgroundColor: '#DC2626', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6, borderWidth: 1, borderColor: '#FFF' }}>
-                      <Text style={{ fontSize: 9, fontWeight: '900', color: '#FFF' }}>YOU</Text>
-                    </View>
-                  )}
-                </View>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}><Text style={{ fontSize: 13, fontWeight: '800', color: '#3D2914', textTransform: 'uppercase' }} numberOfLines={1}>{entry.username || 'Anonymous'}</Text>{isCurrentUser && (<View style={{ backgroundColor: '#DC2626', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6, borderWidth: 1, borderColor: '#FFF' }}><Text style={{ fontSize: 9, fontWeight: '900', color: '#FFF' }}>YOU</Text></View>)}</View>
                 <Text style={{ fontSize: 10, fontWeight: '600', color: '#5D4A3A', marginTop: 2 }}>🏆 {entry.owned_heroes} hero{entry.owned_heroes !== 1 ? 's' : ''}</Text>
               </View>
-              <View style={{ width: 75, alignItems: 'center', marginRight: 6 }}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(34, 197, 94, 0.25)', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 12 }}>
-                  <Zap color="#15803D" size={11} />
-                  <Text style={{ fontSize: 11, fontWeight: '900', color: '#15803D', marginLeft: 3 }}>+{formatShortNumber(entry.hourly_rate)}/hr</Text>
-                </View>
-              </View>
-              <View style={{ width: 80, alignItems: 'flex-end' }}>
-                <View style={{ backgroundColor: 'rgba(61, 41, 20, 0.3)', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12, flexDirection: 'row', alignItems: 'center' }}>
-                  <Coins color="#3D2914" size={12} />
-                  <Text style={{ fontSize: 13, fontWeight: '900', color: '#3D2914', marginLeft: 4 }}>{formatCompactNumber(entry.supercash_balance)}</Text>
-                </View>
-              </View>
+              <View style={{ width: 75, alignItems: 'center', marginRight: 6 }}><View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(34, 197, 94, 0.25)', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 12 }}><Zap color="#15803D" size={11} /><Text style={{ fontSize: 11, fontWeight: '900', color: '#15803D', marginLeft: 3 }}>+{formatShortNumber(entry.hourly_rate)}/hr</Text></View></View>
+              <View style={{ width: 80, alignItems: 'flex-end' }}><View style={{ backgroundColor: 'rgba(61, 41, 20, 0.3)', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12, flexDirection: 'row', alignItems: 'center' }}><Coins color="#3D2914" size={12} /><Text style={{ fontSize: 13, fontWeight: '900', color: '#3D2914', marginLeft: 4 }}>{formatCompactNumber(entry.supercash_balance)}</Text></View></View>
             </LinearGradient>
           </View>
         );

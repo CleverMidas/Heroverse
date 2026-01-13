@@ -22,9 +22,7 @@ const formatNumber = (num: number): string => {
 };
 
 const TabBarIcon = ({ icon: Icon, color, focused }: { icon: typeof Home; color: string; focused: boolean }) => (
-  <View style={[{ padding: 8 }, focused && { backgroundColor: 'rgba(251, 191, 36, 0.15)', borderRadius: 12 }]}>
-    <Icon color={color} size={28} strokeWidth={focused ? 2.5 : 2} />
-  </View>
+  <View style={[{ padding: 8 }, focused && { backgroundColor: 'rgba(251, 191, 36, 0.15)', borderRadius: 12 }]}><Icon color={color} size={28} strokeWidth={focused ? 2.5 : 2} /></View>
 );
 
 function Header() {
@@ -39,29 +37,8 @@ function Header() {
 
   return (
     <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingVertical: 16, backgroundColor: theme.colors.surface, borderBottomWidth: 1, borderBottomColor: theme.colors.divider }}>
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
-        <View style={{ width: 52, height: 52, borderRadius: 16, backgroundColor: 'rgba(251, 191, 36, 0.15)', justifyContent: 'center', alignItems: 'center' }}>
-          <PageIcon color={theme.colors.primary} size={26} strokeWidth={2.5} />
-        </View>
-        <View>
-          <Text style={{ fontSize: 22, fontWeight: '700', color: theme.colors.text }}>{title}</Text>
-          <Text style={{ fontSize: 14, color: theme.colors.textSecondary, marginTop: 3 }}>{username}</Text>
-        </View>
-      </View>
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: 'rgba(251, 191, 36, 0.1)', paddingHorizontal: 14, paddingVertical: 10, borderRadius: 24 }}>
-          <Coins color={theme.colors.primary} size={18} />
-          <Text style={{ fontSize: 16, fontWeight: '700', color: theme.colors.primary }}>{balance}</Text>
-        </View>
-        {pendingSupercash > 0 && (
-          <View style={{ backgroundColor: theme.colors.successLight, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 12 }}>
-            <Text style={{ fontSize: 12, fontWeight: '600', color: theme.colors.success }}>+{formatNumber(pendingSupercash)}</Text>
-          </View>
-        )}
-        <TouchableOpacity onPress={toggleTheme} style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: isDark ? 'rgba(139, 92, 246, 0.15)' : 'rgba(251, 191, 36, 0.15)', justifyContent: 'center', alignItems: 'center' }}>
-          {isDark ? <Sun color="#FBBF24" size={20} /> : <Moon color="#8B5CF6" size={20} />}
-        </TouchableOpacity>
-      </View>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}><View style={{ width: 52, height: 52, borderRadius: 16, backgroundColor: 'rgba(251, 191, 36, 0.15)', justifyContent: 'center', alignItems: 'center' }}><PageIcon color={theme.colors.primary} size={26} strokeWidth={2.5} /></View><View><Text style={{ fontSize: 22, fontWeight: '700', color: theme.colors.text }}>{title}</Text><Text style={{ fontSize: 14, color: theme.colors.textSecondary, marginTop: 3 }}>{username}</Text></View></View>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}><View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: 'rgba(251, 191, 36, 0.1)', paddingHorizontal: 14, paddingVertical: 10, borderRadius: 24 }}><Coins color={theme.colors.primary} size={18} /><Text style={{ fontSize: 16, fontWeight: '700', color: theme.colors.primary }}>{balance}</Text></View>{pendingSupercash > 0 && (<View style={{ backgroundColor: theme.colors.successLight, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 12 }}><Text style={{ fontSize: 12, fontWeight: '600', color: theme.colors.success }}>+{formatNumber(pendingSupercash)}</Text></View>)}<TouchableOpacity onPress={toggleTheme} style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: isDark ? 'rgba(139, 92, 246, 0.15)' : 'rgba(251, 191, 36, 0.15)', justifyContent: 'center', alignItems: 'center' }}>{isDark ? <Sun color="#FBBF24" size={20} /> : <Moon color="#8B5CF6" size={20} />}</TouchableOpacity></View>
     </View>
   );
 }
@@ -87,26 +64,10 @@ function TabLayoutContent() {
   }), [theme, isIOS]);
 
   return (
-    <View style={{ flex: 1, backgroundColor: theme.colors.background }}>
-      <SafeAreaView edges={['top']} style={{ backgroundColor: theme.colors.surface }}>
-        <Header />
-      </SafeAreaView>
-      <View style={{ flex: 1 }}>
-        <Tabs screenOptions={screenOptions}>
-          <Tabs.Screen name="index" options={{ title: 'Home', tabBarIcon: ({ color, focused }) => <TabBarIcon icon={Home} color={color} focused={focused} /> }} />
-          <Tabs.Screen name="heroes" options={{ title: 'My Heroes', tabBarIcon: ({ color, focused }) => <TabBarIcon icon={Users} color={color} focused={focused} /> }} />
-          <Tabs.Screen name="leaderboard" options={{ title: 'Ranks', tabBarIcon: ({ color, focused }) => <TabBarIcon icon={Trophy} color={color} focused={focused} /> }} />
-          <Tabs.Screen name="settings" options={{ title: 'Settings', tabBarIcon: ({ color, focused }) => <TabBarIcon icon={Settings} color={color} focused={focused} /> }} />
-        </Tabs>
-      </View>
-    </View>
+    <View style={{ flex: 1, backgroundColor: theme.colors.background }}><SafeAreaView edges={['top']} style={{ backgroundColor: theme.colors.surface }}><Header /></SafeAreaView><View style={{ flex: 1 }}><Tabs screenOptions={screenOptions}><Tabs.Screen name="index" options={{ title: 'Home', tabBarIcon: ({ color, focused }) => <TabBarIcon icon={Home} color={color} focused={focused} /> }} /><Tabs.Screen name="heroes" options={{ title: 'My Heroes', tabBarIcon: ({ color, focused }) => <TabBarIcon icon={Users} color={color} focused={focused} /> }} /><Tabs.Screen name="leaderboard" options={{ title: 'Ranks', tabBarIcon: ({ color, focused }) => <TabBarIcon icon={Trophy} color={color} focused={focused} /> }} /><Tabs.Screen name="settings" options={{ title: 'Settings', tabBarIcon: ({ color, focused }) => <TabBarIcon icon={Settings} color={color} focused={focused} /> }} /></Tabs></View></View>
   );
 }
 
 export default function TabLayout() {
-  return (
-    <GameProvider>
-      <TabLayoutContent />
-    </GameProvider>
-  );
+  return (<GameProvider><TabLayoutContent /></GameProvider>);
 }

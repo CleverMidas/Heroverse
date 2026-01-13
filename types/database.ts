@@ -6,9 +6,9 @@ export interface Database {
   public: {
     Tables: {
       profiles: {
-        Row: { id: string; username: string | null; supercash_balance: number; has_claimed_free_hero: boolean; created_at: string; updated_at: string; };
-        Insert: { id: string; username?: string | null; supercash_balance?: number; has_claimed_free_hero?: boolean; created_at?: string; updated_at?: string; };
-        Update: { id?: string; username?: string | null; supercash_balance?: number; has_claimed_free_hero?: boolean; created_at?: string; updated_at?: string; };
+        Row: { id: string; username: string | null; supercash_balance: number; has_claimed_free_hero: boolean; referral_code: string | null; referred_by: string | null; referral_bonus_claimed: boolean; created_at: string; updated_at: string; };
+        Insert: { id: string; username?: string | null; supercash_balance?: number; has_claimed_free_hero?: boolean; referral_code?: string | null; referred_by?: string | null; referral_bonus_claimed?: boolean; created_at?: string; updated_at?: string; };
+        Update: { id?: string; username?: string | null; supercash_balance?: number; has_claimed_free_hero?: boolean; referral_code?: string | null; referred_by?: string | null; referral_bonus_claimed?: boolean; created_at?: string; updated_at?: string; };
         Relationships: [];
       };
       hero_rarities: {

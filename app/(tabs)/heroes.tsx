@@ -232,7 +232,7 @@ export default function HeroesScreen() {
                 </View>
                 <View style={{ flex: 1 }} />
                 <View>
-                  <Text style={{ fontSize: 15, fontWeight: '800', color: '#FFFFFF', marginBottom: 8, textShadowColor: 'rgba(0,0,0,0.8)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 3 }}>Mystery Box</Text>
+                  <Text style={{ fontSize: 15, fontWeight: '800', color: '#FFFFFF', marginBottom: 8 }}>Mystery Box</Text>
                   <View style={{ alignSelf: 'flex-start', backgroundColor: 'rgba(251,191,36,0.3)', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 6 }}>
                     <Text style={{ fontSize: 10, fontWeight: '700', color: theme.colors.primary }}>TAP TO OPEN</Text>
                   </View>
@@ -270,7 +270,7 @@ export default function HeroesScreen() {
                   </View>
                 )}
                 <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: 12 }}>
-                  <Text style={{ fontSize: 15, fontWeight: '800', color: '#FFFFFF', marginBottom: 8, textShadowColor: 'rgba(0,0,0,0.8)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 3 }} numberOfLines={1}>
+                  <Text style={{ fontSize: 15, fontWeight: '800', color: '#FFFFFF', marginBottom: 8 }} numberOfLines={1}>
                     {stack.isAnyRevealed ? stack.hero.name : '???'}
                   </Text>
                   <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>

@@ -28,23 +28,10 @@ function RootLayoutNav() {
   }, [session, loading, segments]);
 
   if (loading || !isReady) {
-    return (
-      <View style={[styles.loadingContainer, { backgroundColor: theme.colors.background }]}>
-        <ActivityIndicator size="large" color={theme.colors.primary} />
-      </View>
-    );
+    return (<View style={[styles.loadingContainer, { backgroundColor: theme.colors.background }]}><ActivityIndicator size="large" color={theme.colors.primary} /></View>);
   }
 
-  return (
-    <>
-      <Stack screenOptions={{ headerShown: false }}>
-        <Stack.Screen name="(auth)" />
-        <Stack.Screen name="(tabs)" />
-        <Stack.Screen name="+not-found" />
-      </Stack>
-      <StatusBar style={isDark ? 'light' : 'dark'} />
-    </>
-  );
+  return (<><Stack screenOptions={{ headerShown: false }}><Stack.Screen name="(auth)" /><Stack.Screen name="(tabs)" /><Stack.Screen name="+not-found" /></Stack><StatusBar style={isDark ? 'light' : 'dark'} /></>);
 }
 
 export default function RootLayout() {
