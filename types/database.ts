@@ -1,12 +1,14 @@
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
 
+export type TransactionType = 'send' | 'receive' | 'collect' | 'mystery_box' | 'referral_bonus' | 'daily_bonus' | 'quest_reward' | 'admin_bonus';
+
 export interface Database {
   public: {
     Tables: {
       profiles: {
-        Row: { id: string; username: string | null; supercash_balance: number; has_claimed_free_hero: boolean; created_at: string; updated_at: string; };
-        Insert: { id: string; username?: string | null; supercash_balance?: number; has_claimed_free_hero?: boolean; created_at?: string; updated_at?: string; };
-        Update: { id?: string; username?: string | null; supercash_balance?: number; has_claimed_free_hero?: boolean; created_at?: string; updated_at?: string; };
+        Row: { id: string; username: string | null; supercash_balance: number; has_claimed_free_hero: boolean; referral_code: string | null; referred_by: string | null; referral_bonus_claimed: boolean; created_at: string; updated_at: string; };
+        Insert: { id: string; username?: string | null; supercash_balance?: number; has_claimed_free_hero?: boolean; referral_code?: string | null; referred_by?: string | null; referral_bonus_claimed?: boolean; created_at?: string; updated_at?: string; };
+        Update: { id?: string; username?: string | null; supercash_balance?: number; has_claimed_free_hero?: boolean; referral_code?: string | null; referred_by?: string | null; referral_bonus_claimed?: boolean; created_at?: string; updated_at?: string; };
         Relationships: [];
       };
       hero_rarities: {
@@ -26,6 +28,12 @@ export interface Database {
         Insert: { id?: string; user_id: string; hero_id: string; is_active?: boolean; is_revealed?: boolean; activated_at?: string | null; last_collected_at?: string | null; acquired_at?: string; };
         Update: { id?: string; user_id?: string; hero_id?: string; is_active?: boolean; is_revealed?: boolean; activated_at?: string | null; last_collected_at?: string | null; acquired_at?: string; };
         Relationships: [{ foreignKeyName: "user_heroes_user_id_fkey"; columns: ["user_id"]; isOneToOne: false; referencedRelation: "profiles"; referencedColumns: ["id"]; }, { foreignKeyName: "user_heroes_hero_id_fkey"; columns: ["hero_id"]; isOneToOne: false; referencedRelation: "heroes"; referencedColumns: ["id"]; }];
+      };
+      transactions: {
+        Row: { id: string; user_id: string; type: TransactionType; amount: number; balance_after: number; description: string | null; related_user_id: string | null; related_username: string | null; metadata: Json; created_at: string; };
+        Insert: { id?: string; user_id: string; type: TransactionType; amount: number; balance_after: number; description?: string | null; related_user_id?: string | null; related_username?: string | null; metadata?: Json; created_at?: string; };
+        Update: { id?: string; user_id?: string; type?: TransactionType; amount?: number; balance_after?: number; description?: string | null; related_user_id?: string | null; related_username?: string | null; metadata?: Json; created_at?: string; };
+        Relationships: [{ foreignKeyName: "transactions_user_id_fkey"; columns: ["user_id"]; isOneToOne: false; referencedRelation: "profiles"; referencedColumns: ["id"]; }];
       };
     };
     Views: { [_ in never]: never; };
@@ -53,3 +61,5 @@ export type StackedHero = {
   instances: UserHeroWithDetails[];
   primaryInstance: UserHeroWithDetails;
 };
+
+export type Transaction = Database['public']['Tables']['transactions']['Row'];

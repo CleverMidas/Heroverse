@@ -7,44 +7,34 @@ import { AuthProvider, useAuth } from '@/contexts/AuthContext';
 import { ThemeProvider, useTheme } from '@/contexts/ThemeContext';
 
 function RootLayoutNav() {
-  const { session, loading } = useAuth();
+  const { session, loading, mfaChecking, mfaVerified } = useAuth();
   const { theme, isDark } = useTheme();
   const segments = useSegments();
   const router = useRouter();
-  const [isReady, setIsReady] = useState(false);
+  const [initialLoading, setInitialLoading] = useState(true);
 
   useEffect(() => {
     if (loading) return;
+    setInitialLoading(false);
+  }, [loading]);
+
+  useEffect(() => {
+    if (loading || mfaChecking) return;
 
     const inAuthGroup = segments[0] === '(auth)';
 
     if (!session && !inAuthGroup) {
       router.replace('/(auth)/login');
-    } else if (session && inAuthGroup) {
+    } else if (session && mfaVerified && inAuthGroup) {
       router.replace('/(tabs)');
     }
+  }, [session, loading, mfaChecking, segments, mfaVerified]);
 
-    setIsReady(true);
-  }, [session, loading, segments]);
-
-  if (loading || !isReady) {
-    return (
-      <View style={[styles.loadingContainer, { backgroundColor: theme.colors.background }]}>
-        <ActivityIndicator size="large" color={theme.colors.primary} />
-      </View>
-    );
+  if (initialLoading) {
+    return (<View style={[styles.loadingContainer, { backgroundColor: theme.colors.background }]}><ActivityIndicator size="large" color={theme.colors.primary} /></View>);
   }
 
-  return (
-    <>
-      <Stack screenOptions={{ headerShown: false }}>
-        <Stack.Screen name="(auth)" />
-        <Stack.Screen name="(tabs)" />
-        <Stack.Screen name="+not-found" />
-      </Stack>
-      <StatusBar style={isDark ? 'light' : 'dark'} />
-    </>
-  );
+  return (<><Stack screenOptions={{ headerShown: false }}><Stack.Screen name="(auth)" /><Stack.Screen name="(tabs)" /><Stack.Screen name="+not-found" /></Stack><StatusBar style={isDark ? 'light' : 'dark'} /></>);
 }
 
 export default function RootLayout() {
