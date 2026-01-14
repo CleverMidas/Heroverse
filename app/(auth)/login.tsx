@@ -2,14 +2,13 @@ import { useState, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform, ScrollView, ActivityIndicator, ImageBackground, Dimensions, Pressable } from 'react-native';
 import { useRouter } from 'expo-router';
 import { supabase } from '@/lib/supabase';
+import { EMAIL_REGEX } from '@/lib/validation';
 import { Mail, Lock, Eye, EyeOff, AlertCircle, CheckCircle } from 'lucide-react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 
 const { width, height } = Dimensions.get('window');
 const backgroundImage = require('@/assets/sign_bg.jpg');
-
-const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -24,76 +23,31 @@ export default function LoginScreen() {
   const isFormValid = emailValid && password.length >= 1;
 
   useEffect(() => {
-    if (!email) {
-      setEmailError(null);
-      setEmailValid(false);
-      return;
-    }
-
-    if (!EMAIL_REGEX.test(email)) {
-      setEmailError('Please enter a valid email address');
-      setEmailValid(false);
-    } else {
-      setEmailError(null);
-      setEmailValid(true);
-    }
+    if (!email) { setEmailError(null); setEmailValid(false); return; }
+    if (!EMAIL_REGEX.test(email)) { setEmailError('Please enter a valid email address'); setEmailValid(false); }
+    else { setEmailError(null); setEmailValid(true); }
   }, [email]);
 
   const handleLogin = async () => {
     setError(null);
-
-    if (!email) {
-      setError('Please enter your email');
-      return;
-    }
-
-    if (!emailValid) {
-      setError('Please enter a valid email address');
-      return;
-    }
-
-    if (!password) {
-      setError('Please enter your password');
-      return;
-    }
-
+    if (!email) { setError('Please enter your email'); return; }
+    if (!emailValid) { setError('Please enter a valid email address'); return; }
+    if (!password) { setError('Please enter your password'); return; }
     setLoading(true);
-
-    const { error: signInError } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-
+    const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
     if (signInError) {
-      if (signInError.message.includes('Invalid login credentials')) {
-        setError('Invalid email or password. Please try again.');
-      } else if (signInError.message.includes('Email not confirmed')) {
-        setError('Please verify your email before signing in.');
-      } else {
-        setError(signInError.message);
-      }
-    } else {
-      router.replace('/(tabs)');
-    }
-
+      if (signInError.message.includes('Invalid login credentials')) setError('Invalid email or password. Please try again.');
+      else if (signInError.message.includes('Email not confirmed')) setError('Please verify your email before signing in.');
+      else setError(signInError.message);
+    } else { router.replace('/(tabs)'); }
     setLoading(false);
   };
 
   const handleGoogleLogin = async () => {
     setLoading(true);
     setError(null);
-
-    const { error: oauthError } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: {
-        redirectTo: Platform.OS === 'web' ? window.location.origin : undefined,
-      },
-    });
-
-    if (oauthError) {
-      setError(oauthError.message);
-    }
-
+    const { error: oauthError } = await supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: Platform.OS === 'web' ? window.location.origin : undefined } });
+    if (oauthError) setError(oauthError.message);
     setLoading(false);
   };
 
@@ -110,7 +64,7 @@ export default function LoginScreen() {
       <SafeAreaView style={styles.safeArea}>
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.keyboardView}>
           <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
-            <View style={styles.container}><View style={styles.content}><View style={styles.header}><Text style={styles.title}>Welcome Back</Text></View>{error && (<View style={styles.errorContainer}><AlertCircle color="#DC2626" size={20} /><Text style={styles.errorText}>{error}</Text></View>)}<View style={styles.formContainer}><View><View style={getEmailInputStyle()}><Mail size={20} color="rgba(255, 255, 255, 0.7)" style={styles.inputIcon} /><TextInput style={styles.input} placeholder="Email" placeholderTextColor="rgba(255, 255, 255, 0.5)" value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" autoComplete="email" />{email && (emailError ? <AlertCircle color="#EF4444" size={18} style={styles.fieldStatus} /> : emailValid && <CheckCircle color="#22C55E" size={18} style={styles.fieldStatus} />)}</View>{emailError && <Text style={styles.fieldError}>{emailError}</Text>}</View><View style={styles.passwordContainer}><View style={styles.inputContainer}><Lock size={20} color="rgba(255, 255, 255, 0.7)" style={styles.inputIcon} /><TextInput style={[styles.input, styles.inputWithButton]} placeholder="Password" placeholderTextColor="rgba(255, 255, 255, 0.5)" value={password} onChangeText={setPassword} secureTextEntry={!showPassword} autoCapitalize="none" autoComplete="password" /><Pressable style={styles.eyeButton} onPress={() => setShowPassword(!showPassword)}>{showPassword ? <EyeOff size={20} color="rgba(255, 255, 255, 0.7)" /> : <Eye size={20} color="rgba(255, 255, 255, 0.7)" />}</Pressable></View></View><TouchableOpacity style={[styles.authButton, (!isFormValid || loading) && styles.authButtonDisabled]} onPress={handleLogin} disabled={loading || !isFormValid} activeOpacity={0.8}><LinearGradient colors={loading ? ['#94A3B8', '#64748B'] : isFormValid ? ['#3B82F6', '#2563EB'] : ['#64748B', '#475569']} style={styles.authGradient}>{loading ? <ActivityIndicator color="#FFFFFF" /> : <Text style={styles.authButtonText}>Sign In</Text>}</LinearGradient></TouchableOpacity><TouchableOpacity style={styles.toggleButton} onPress={() => router.push('/(auth)/signup')} disabled={loading} activeOpacity={0.7}><Text style={styles.toggleText}>Don't have an account? Sign Up</Text></TouchableOpacity><View style={styles.divider}><View style={styles.dividerLine} /><Text style={styles.dividerText}>OR</Text><View style={styles.dividerLine} /></View><TouchableOpacity style={styles.googleButton} onPress={handleGoogleLogin} disabled={loading} activeOpacity={0.8}><View style={[styles.googleButtonContent, loading && styles.buttonDisabled]}>{loading ? (<ActivityIndicator color="#FFFFFF" />) : (<><View style={styles.googleIcon}><Text style={styles.googleIconText}>G</Text></View><Text style={styles.googleButtonText}>Continue with Google</Text></>)}</View></TouchableOpacity></View><Text style={styles.terms}>By continuing, you agree to our Terms of Service and Privacy Policy</Text></View></View>
+            <View style={styles.container}><View style={styles.content}><View style={styles.header}><Text style={styles.title}>Welcome Back</Text></View>{error && <View style={styles.errorContainer}><AlertCircle color="#DC2626" size={20} /><Text style={styles.errorText}>{error}</Text></View>}<View style={styles.formContainer}><View><View style={getEmailInputStyle()}><Mail size={20} color="rgba(255, 255, 255, 0.7)" style={styles.inputIcon} /><TextInput style={styles.input} placeholder="Email" placeholderTextColor="rgba(255, 255, 255, 0.5)" value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" autoComplete="email" />{email && (emailError ? <AlertCircle color="#EF4444" size={18} style={styles.fieldStatus} /> : emailValid && <CheckCircle color="#22C55E" size={18} style={styles.fieldStatus} />)}</View>{emailError && <Text style={styles.fieldError}>{emailError}</Text>}</View><View style={styles.passwordContainer}><View style={styles.inputContainer}><Lock size={20} color="rgba(255, 255, 255, 0.7)" style={styles.inputIcon} /><TextInput style={[styles.input, styles.inputWithButton]} placeholder="Password" placeholderTextColor="rgba(255, 255, 255, 0.5)" value={password} onChangeText={setPassword} secureTextEntry={!showPassword} autoCapitalize="none" autoComplete="password" /><Pressable style={styles.eyeButton} onPress={() => setShowPassword(!showPassword)}>{showPassword ? <EyeOff size={20} color="rgba(255, 255, 255, 0.7)" /> : <Eye size={20} color="rgba(255, 255, 255, 0.7)" />}</Pressable></View></View><TouchableOpacity style={[styles.authButton, (!isFormValid || loading) && styles.authButtonDisabled]} onPress={handleLogin} disabled={loading || !isFormValid} activeOpacity={0.8}><LinearGradient colors={loading ? ['#94A3B8', '#64748B'] : isFormValid ? ['#3B82F6', '#2563EB'] : ['#64748B', '#475569']} style={styles.authGradient}>{loading ? <ActivityIndicator color="#FFFFFF" /> : <Text style={styles.authButtonText}>Sign In</Text>}</LinearGradient></TouchableOpacity><TouchableOpacity style={styles.toggleButton} onPress={() => router.push('/(auth)/signup')} disabled={loading} activeOpacity={0.7}><Text style={styles.toggleText}>Don't have an account? Sign Up</Text></TouchableOpacity><View style={styles.divider}><View style={styles.dividerLine} /><Text style={styles.dividerText}>OR</Text><View style={styles.dividerLine} /></View><TouchableOpacity style={styles.googleButton} onPress={handleGoogleLogin} disabled={loading} activeOpacity={0.8}><View style={[styles.googleButtonContent, loading && styles.buttonDisabled]}>{loading ? <ActivityIndicator color="#FFFFFF" /> : <><View style={styles.googleIcon}><Text style={styles.googleIconText}>G</Text></View><Text style={styles.googleButtonText}>Continue with Google</Text></>}</View></TouchableOpacity></View><Text style={styles.terms}>By continuing, you agree to our Terms of Service and Privacy Policy</Text></View></View>
           </ScrollView>
         </KeyboardAvoidingView>
       </SafeAreaView>
@@ -120,7 +74,7 @@ export default function LoginScreen() {
 
 const styles = StyleSheet.create({
   safeArea: { flex: 1 },
-  backgroundImage: { flex: 1, width: width, height: height },
+  backgroundImage: { flex: 1, width, height },
   overlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0, 0, 0, 0.5)' },
   keyboardView: { flex: 1 },
   scrollContent: { flexGrow: 1, minHeight: height },

@@ -1,49 +1,21 @@
-import { useState, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image, ActivityIndicator, Modal, Dimensions, Animated, ImageSourcePropType, ImageStyle, StyleProp, ImageBackground } from 'react-native';
-
-const { width, height } = Dimensions.get('window');
+import { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image, ActivityIndicator, Modal, Dimensions, ImageBackground } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
 import { useGame } from '@/contexts/GameContext';
 import { useTheme } from '@/contexts/ThemeContext';
+import { SkeletonImage } from '@/components/ui';
 import { StackedHero, HeroWithRarity } from '@/types/database';
 import { Zap, Coins, Gift, X, Sparkles, Check, Layers, Flame } from 'lucide-react-native';
 import { getHeroImageSource } from '@/lib/heroImages';
 
-const backgroundImage = require('@/assets/home_bg.jpg');
-const goldenDice = require('@/assets/golden_dice.png');
+const { width, height } = Dimensions.get('window');
+const BG = require('@/assets/home_bg.jpg');
+const DICE = require('@/assets/golden_dice.png');
 
-type FilterTab = 'all' | 'active' | 'inactive';
-
-const SkeletonImage = ({ source, style, resizeMode = 'cover' }: { source: ImageSourcePropType; style: StyleProp<ImageStyle>; resizeMode?: 'cover' | 'contain' }) => {
-  const [loaded, setLoaded] = useState(false);
-  const pulseAnim = useRef(new Animated.Value(1)).current;
-  const { theme } = useTheme();
-
-  useEffect(() => {
-    const pulse = Animated.loop(
-      Animated.sequence([
-        Animated.timing(pulseAnim, { toValue: 0.5, duration: 600, useNativeDriver: true }),
-        Animated.timing(pulseAnim, { toValue: 1, duration: 600, useNativeDriver: true }),
-      ])
-    );
-    if (!loaded) pulse.start();
-    return () => pulse.stop();
-  }, [loaded, pulseAnim]);
-
-  return (
-    <View style={[style as any, { backgroundColor: theme.colors.surface, overflow: 'hidden' }]}>
-      {!loaded && (
-        <Animated.View style={[StyleSheet.absoluteFill, { backgroundColor: theme.colors.textMuted, opacity: pulseAnim }]}>
-          <LinearGradient colors={['transparent', 'rgba(255,255,255,0.1)', 'transparent']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={[StyleSheet.absoluteFill]} />
-        </Animated.View>
-      )}
-      <Image source={source} style={[{ width: '100%', height: '100%' }, !loaded && { position: 'absolute', opacity: 0 }]} resizeMode={resizeMode} onLoad={() => setLoaded(true)} />
-    </View>
-  );
-};
+type Filter = 'all' | 'active' | 'inactive';
 
 export default function HeroesScreen() {
   const { profile } = useAuth();
@@ -53,400 +25,209 @@ export default function HeroesScreen() {
   const [claiming, setClaiming] = useState(false);
   const [activating, setActivating] = useState<string | null>(null);
   const [deactivating, setDeactivating] = useState<string | null>(null);
-  const [selectedStack, setSelectedStack] = useState<StackedHero | null>(null);
-  const [showClaimModal, setShowClaimModal] = useState(false);
-  const [activeFilter, setActiveFilter] = useState<FilterTab>('all');
-  const [showMysteryModal, setShowMysteryModal] = useState(false);
-  const [purchasingMystery, setPurchasingMystery] = useState(false);
-  const [revealedHero, setRevealedHero] = useState<HeroWithRarity | null>(null);
+  const [selected, setSelected] = useState<StackedHero | null>(null);
+  const [showClaim, setShowClaim] = useState(false);
+  const [filter, setFilter] = useState<Filter>('all');
+  const [showMystery, setShowMystery] = useState(false);
+  const [purchasing, setPurchasing] = useState(false);
+  const [revealed, setRevealed] = useState<HeroWithRarity | null>(null);
 
-  useEffect(() => {
-    if (openMystery === 'true') {
-      setShowMysteryModal(true);
-    }
-  }, [openMystery]);
+  useEffect(() => { if (openMystery === 'true') setShowMystery(true); }, [openMystery]);
 
-  const starterHero = allHeroes.find(h => h.is_starter);
-  const canClaimFreeHero = !profile?.has_claimed_free_hero && starterHero;
+  const starter = allHeroes.find(h => h.is_starter);
+  const canClaim = !profile?.has_claimed_free_hero && starter;
+  const total = stackedHeroes.reduce((s, h) => s + h.count, 0);
+  const active = stackedHeroes.reduce((s, h) => s + h.activeCount, 0);
+  const power = stackedHeroes.reduce((s, h) => s + h.totalEarningRate * 10, 0);
+  const earning = stackedHeroes.reduce((s, h) => s + h.totalEarningRate, 0);
+  const filtered = stackedHeroes.filter(st => filter === 'all' ? true : filter === 'active' ? st.isAnyActive : !st.isAnyActive);
 
-  const totalHeroCount = stackedHeroes.reduce((sum, s) => sum + s.count, 0);
-  const activeHeroCount = stackedHeroes.reduce((sum, s) => sum + s.activeCount, 0);
-  const totalPower = stackedHeroes.reduce((sum, s) => sum + s.totalEarningRate * 10, 0);
-  const totalEarningRate = stackedHeroes.reduce((sum, s) => sum + s.totalEarningRate, 0);
+  const onClaim = async () => { setClaiming(true); if (await claimFreeHero()) setShowClaim(true); setClaiming(false); };
+  const onActivate = async (id: string) => { setActivating(id); await activateAllCopies(id); setActivating(null); setSelected(null); };
+  const onDeactivate = async (id: string) => { setDeactivating(id); await deactivateAllCopies(id); setDeactivating(null); setSelected(null); };
+  const onPurchase = async () => { setPurchasing(true); const r = await purchaseMysteryBox(); setPurchasing(false); if (r.success && r.hero) setRevealed(r.hero); };
+  const closeMystery = () => { setShowMystery(false); setRevealed(null); };
 
-  const filteredStacks = stackedHeroes.filter(stack => {
-    switch (activeFilter) {
-      case 'active': return stack.isAnyActive;
-      case 'inactive': return !stack.isAnyActive;
-      default: return true;
-    }
-  });
-
-  const handleClaimFreeHero = async () => {
-    setClaiming(true);
-    const success = await claimFreeHero();
-    setClaiming(false);
-    if (success) setShowClaimModal(true);
-  };
-
-  const handleActivateStack = async (heroId: string) => {
-    setActivating(heroId);
-    await activateAllCopies(heroId);
-    setActivating(null);
-    setSelectedStack(null);
-  };
-
-  const handleDeactivateStack = async (heroId: string) => {
-    setDeactivating(heroId);
-    await deactivateAllCopies(heroId);
-    setDeactivating(null);
-    setSelectedStack(null);
-  };
-
-  const handlePurchaseMysteryBox = async () => {
-    setPurchasingMystery(true);
-    const result = await purchaseMysteryBox();
-    setPurchasingMystery(false);
-    if (result.success && result.hero) {
-      setRevealedHero(result.hero);
-    }
-  };
-
-  const handleCloseMysteryModal = () => {
-    setShowMysteryModal(false);
-    setRevealedHero(null);
-  };
-
-  if (loading) {
-    return (
-      <ImageBackground source={backgroundImage} style={{ flex: 1, width, height }} resizeMode="cover">
-        <View style={{ flex: 1, backgroundColor: isDark ? 'rgba(10, 15, 30, 0.85)' : 'rgba(248, 250, 252, 0.70)' }}>
-          <SafeAreaView style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-            <ActivityIndicator size="large" color={theme.colors.primary} />
-            <Text style={{ color: theme.colors.textSecondary, marginTop: 16, fontSize: 14 }}>Loading heroes...</Text>
-          </SafeAreaView>
-        </View>
-      </ImageBackground>
-    );
-  }
+  if (loading) return (
+    <ImageBackground source={BG} style={s.bg} resizeMode="cover"><View style={[s.overlay, { backgroundColor: isDark ? 'rgba(10,15,30,0.85)' : 'rgba(248,250,252,0.70)' }]}><SafeAreaView style={s.loadCenter}><ActivityIndicator size="large" color={theme.colors.primary} /><Text style={[s.loadText, { color: theme.colors.textSecondary }]}>Loading heroes...</Text></SafeAreaView></View></ImageBackground>
+  );
 
   return (
-    <ImageBackground source={backgroundImage} style={{ flex: 1, width, height }} resizeMode="cover">
-      <View style={{ flex: 1, backgroundColor: isDark ? 'rgba(10, 15, 30, 0.85)' : 'rgba(248, 250, 252, 0.70)' }}>
-        <SafeAreaView style={{ flex: 1 }}>
-        {error && (
-          <View style={{ marginHorizontal: 16, backgroundColor: theme.colors.errorLight, borderRadius: 12, padding: 12, marginBottom: 12, borderWidth: 1, borderColor: `${theme.colors.error}50` }}>
-            <Text style={{ color: theme.colors.error, fontSize: 14, textAlign: 'center' }}>{error}</Text>
-          </View>
-        )}
-
-        <ScrollView style={{ flex: 1, paddingHorizontal: 16, paddingTop: 12 }} showsVerticalScrollIndicator={false}>
-          <View style={{ flexDirection: 'row', gap: 8, marginBottom: 14 }}>
-            <View style={{ flex: 1, backgroundColor: theme.colors.card, borderRadius: 12, padding: 10, alignItems: 'center', borderWidth: 1, borderColor: theme.colors.primary }}>
-              <View style={{ width: 28, height: 28, borderRadius: 8, backgroundColor: 'rgba(251, 191, 36, 0.15)', justifyContent: 'center', alignItems: 'center', marginBottom: 4 }}>
-                <Layers color={theme.colors.primary} size={16} />
-              </View>
-              <Text style={{ fontSize: 16, fontWeight: '700', color: theme.colors.text }}>{totalHeroCount}</Text>
-              <Text style={{ fontSize: 9, color: theme.colors.textSecondary }}>Total</Text>
+    <ImageBackground source={BG} style={s.bg} resizeMode="cover">
+      <View style={[s.overlay, { backgroundColor: isDark ? 'rgba(10,15,30,0.85)' : 'rgba(248,250,252,0.70)' }]}>
+        <SafeAreaView style={s.flex1}>
+          {error && <View style={[s.errorBar, { backgroundColor: theme.colors.errorLight, borderColor: `${theme.colors.error}50` }]}><Text style={{ color: theme.colors.error, fontSize: 14, textAlign: 'center' }}>{error}</Text></View>}
+          <ScrollView style={s.scroll} showsVerticalScrollIndicator={false}>
+            <View style={s.statsRow}>
+              <StatBox icon={Layers} color={theme.colors.primary} value={total} label="Total" theme={theme} />
+              <StatBox icon={Zap} color={theme.colors.success} value={active} label="Active" theme={theme} />
+              <StatBox icon={Flame} color={theme.colors.purple} value={power} label="Power" theme={theme} />
+              <StatBox icon={Coins} color={theme.colors.info} value={earning} label="SC/hr" theme={theme} />
             </View>
-            <View style={{ flex: 1, backgroundColor: theme.colors.card, borderRadius: 12, padding: 10, alignItems: 'center', borderWidth: 1, borderColor: theme.colors.success }}>
-              <View style={{ width: 28, height: 28, borderRadius: 8, backgroundColor: theme.colors.successLight, justifyContent: 'center', alignItems: 'center', marginBottom: 4 }}>
-                <Zap color={theme.colors.success} size={16} />
-              </View>
-              <Text style={{ fontSize: 16, fontWeight: '700', color: theme.colors.text }}>{activeHeroCount}</Text>
-              <Text style={{ fontSize: 9, color: theme.colors.textSecondary }}>Active</Text>
+            {canClaim && (
+              <TouchableOpacity style={s.claimBtn} onPress={onClaim} disabled={claiming}><LinearGradient colors={theme.gradients.success} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={s.claimGrad}><View style={s.claimIcon}><Gift color="#FFF" size={28} /></View><View style={s.flex1}><Text style={s.claimTitle}>Claim Your Free Hero!</Text><Text style={s.claimSub}>Start earning SuperCash now</Text></View><View style={s.claimAction}>{claiming ? <ActivityIndicator color={theme.colors.success} /> : <Text style={[s.claimActionText, { color: theme.colors.success }]}>CLAIM</Text>}</View></LinearGradient></TouchableOpacity>
+            )}
+            <View style={s.filterRow}>
+              {(['all', 'active', 'inactive'] as Filter[]).map(f => {
+                const cnt = f === 'all' ? stackedHeroes.length : f === 'active' ? stackedHeroes.filter(h => h.isAnyActive).length : stackedHeroes.filter(h => !h.isAnyActive).length;
+                const lbl = f === 'all' ? 'All' : f === 'active' ? 'Active' : 'Idle';
+                return <TouchableOpacity key={f} style={[s.filterBtn, { backgroundColor: filter === f ? 'rgba(251,191,36,0.15)' : theme.colors.card, borderColor: filter === f ? theme.colors.primary : theme.colors.cardBorder }]} onPress={() => setFilter(f)}><Text style={[s.filterText, { color: filter === f ? theme.colors.primary : theme.colors.textMuted }]}>{lbl} ({cnt})</Text></TouchableOpacity>;
+              })}
             </View>
-            <View style={{ flex: 1, backgroundColor: theme.colors.card, borderRadius: 12, padding: 10, alignItems: 'center', borderWidth: 1, borderColor: theme.colors.purple }}>
-              <View style={{ width: 28, height: 28, borderRadius: 8, backgroundColor: theme.colors.purpleLight, justifyContent: 'center', alignItems: 'center', marginBottom: 4 }}>
-                <Flame color={theme.colors.purple} size={16} />
-              </View>
-              <Text style={{ fontSize: 16, fontWeight: '700', color: theme.colors.text }}>{totalPower}</Text>
-              <Text style={{ fontSize: 9, color: theme.colors.textSecondary }}>Power</Text>
-            </View>
-            <View style={{ flex: 1, backgroundColor: theme.colors.card, borderRadius: 12, padding: 10, alignItems: 'center', borderWidth: 1, borderColor: theme.colors.info }}>
-              <View style={{ width: 28, height: 28, borderRadius: 8, backgroundColor: theme.colors.infoLight, justifyContent: 'center', alignItems: 'center', marginBottom: 4 }}>
-                <Coins color={theme.colors.info} size={16} />
-              </View>
-              <Text style={{ fontSize: 16, fontWeight: '700', color: theme.colors.text }}>{totalEarningRate}</Text>
-              <Text style={{ fontSize: 9, color: theme.colors.textSecondary }}>SC/hr</Text>
-            </View>
-          </View>
-
-          {canClaimFreeHero && (
-            <TouchableOpacity style={{ borderRadius: 14, overflow: 'hidden', marginBottom: 14 }} onPress={handleClaimFreeHero} disabled={claiming}>
-              <LinearGradient colors={theme.gradients.success} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ padding: 16 }}>
-                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                  <View style={{ width: 48, height: 48, borderRadius: 14, backgroundColor: 'rgba(255, 255, 255, 0.2)', justifyContent: 'center', alignItems: 'center', marginRight: 12 }}>
-                    <Gift color="#FFFFFF" size={28} />
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={{ fontSize: 14, fontWeight: '700', color: '#FFFFFF', marginBottom: 2 }}>Claim Your Free Hero!</Text>
-                    <Text style={{ fontSize: 11, color: 'rgba(255, 255, 255, 0.8)' }}>Start earning SuperCash now</Text>
-                  </View>
-                  <View style={{ backgroundColor: '#FFFFFF', paddingHorizontal: 16, paddingVertical: 10, borderRadius: 10 }}>
-                    {claiming ? <ActivityIndicator color={theme.colors.success} /> : <Text style={{ fontSize: 12, fontWeight: '700', color: theme.colors.success }}>CLAIM</Text>}
-                  </View>
-                </View>
-              </LinearGradient>
-            </TouchableOpacity>
-          )}
-
-          <View style={{ flexDirection: 'row', gap: 8, marginBottom: 14 }}>
-            {(['all', 'active', 'inactive'] as FilterTab[]).map((filter) => {
-              const count = filter === 'all' ? stackedHeroes.length : filter === 'active' ? stackedHeroes.filter(s => s.isAnyActive).length : stackedHeroes.filter(s => !s.isAnyActive).length;
-              const label = filter === 'all' ? 'All' : filter === 'active' ? 'Active' : 'Idle';
-              return (
-                <TouchableOpacity
-                  key={filter}
-                  style={{
-                    flex: 1,
-                    paddingVertical: 10,
-                    paddingHorizontal: 8,
-                    backgroundColor: activeFilter === filter ? 'rgba(251, 191, 36, 0.15)' : theme.colors.card,
-                    borderRadius: 10,
-                    borderWidth: 1,
-                    borderColor: activeFilter === filter ? theme.colors.primary : theme.colors.cardBorder,
-                    alignItems: 'center',
-                  }}
-                  onPress={() => setActiveFilter(filter)}
-                >
-                  <Text style={{ fontSize: 12, fontWeight: '600', color: activeFilter === filter ? theme.colors.primary : theme.colors.textMuted }}>
-                    {label} ({count})
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
-
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 20 }}>
-            <TouchableOpacity
-              style={{ width: (width - 42) / 2, height: 220, borderRadius: 16, overflow: 'hidden', borderWidth: 2, borderColor: theme.colors.primary }}
-              onPress={() => setShowMysteryModal(true)}
-              activeOpacity={0.85}
-            >
-              <Image source={goldenDice} style={{ width: '100%', height: '100%', position: 'absolute', top: 0, left: 0 }} resizeMode="cover" />
-              <LinearGradient colors={['transparent', 'rgba(0,0,0,0.8)']} locations={[0.3, 1]} style={StyleSheet.absoluteFillObject} />
-              <View style={{ flex: 1, justifyContent: 'space-between', padding: 12 }}>
-                <View style={{ alignSelf: 'flex-end', backgroundColor: theme.colors.primary, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 8 }}>
-                  <Text style={{ fontSize: 11, fontWeight: '800', color: '#0F172A' }}>$4.99</Text>
-                </View>
-                <View style={{ flex: 1 }} />
-                <View>
-                  <Text style={{ fontSize: 15, fontWeight: '800', color: '#FFFFFF', marginBottom: 8 }}>Mystery Box</Text>
-                  <View style={{ alignSelf: 'flex-start', backgroundColor: 'rgba(251,191,36,0.3)', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 6 }}>
-                    <Text style={{ fontSize: 10, fontWeight: '700', color: theme.colors.primary }}>TAP TO OPEN</Text>
-                  </View>
-                </View>
-              </View>
-            </TouchableOpacity>
-
-            {filteredStacks.map(stack => (
-              <TouchableOpacity
-                key={stack.hero_id}
-                style={{
-                  width: (width - 42) / 2,
-                  height: 220,
-                  backgroundColor: theme.colors.card,
-                  borderRadius: 16,
-                  overflow: 'hidden',
-                  borderWidth: 2,
-                  borderColor: stack.isAnyRevealed ? (stack.isAnyActive ? stack.hero.hero_rarities.color_hex : theme.colors.cardBorder) : theme.colors.primary,
-                  position: 'relative',
-                }}
-                onPress={() => setSelectedStack(stack)}
-                activeOpacity={0.85}
-              >
-                <SkeletonImage source={getHeroImageSource(stack.hero.image_url)} style={{ width: '100%', height: '100%', position: 'absolute', top: 0, left: 0 }} />
-                <LinearGradient colors={theme.gradients.hero} locations={[0.1, 1]} style={StyleSheet.absoluteFillObject} />
-                {stack.count > 1 && (
-                  <View style={{ position: 'absolute', top: 8, left: 8, zIndex: 10, backgroundColor: theme.colors.primary, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 8 }}>
-                    <Text style={{ fontSize: 12, fontWeight: '900', color: '#0F172A' }}>{stack.count}X</Text>
-                  </View>
-                )}
-                {stack.isAnyActive && stack.isAnyRevealed && (
-                  <View style={{ position: 'absolute', top: 8, right: 8, zIndex: 10, flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: theme.colors.success, paddingHorizontal: 8, paddingVertical: 5, borderRadius: 8 }}>
-                    <Sparkles color="#FFFFFF" size={10} />
-                    <Text style={{ fontSize: 9, fontWeight: '800', color: '#FFFFFF' }}>ACTIVE</Text>
-                  </View>
-                )}
-                <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: 12 }}>
-                  <Text style={{ fontSize: 15, fontWeight: '800', color: '#FFFFFF', marginBottom: 8 }} numberOfLines={1}>
-                    {stack.isAnyRevealed ? stack.hero.name : '???'}
-                  </Text>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <View style={{ paddingHorizontal: 10, paddingVertical: 5, borderRadius: 6, backgroundColor: stack.isAnyRevealed ? stack.hero.hero_rarities.color_hex + '25' : 'rgba(251, 191, 36, 0.2)' }}>
-                      <Text style={{ fontSize: 11, fontWeight: '700', color: stack.isAnyRevealed ? stack.hero.hero_rarities.color_hex : theme.colors.primary }}>
-                        {stack.isAnyRevealed ? stack.hero.hero_rarities.name : '???'}
-                      </Text>
-                    </View>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: 'rgba(251, 191, 36, 0.15)', paddingHorizontal: 8, paddingVertical: 5, borderRadius: 6 }}>
-                      <Coins color={theme.colors.primary} size={14} />
-                      <Text style={{ fontSize: 12, fontWeight: '700', color: theme.colors.primary }}>
-                        {stack.isAnyRevealed ? `${stack.hero.hero_rarities.supercash_per_hour}/hr` : '???'}
-                      </Text>
-                    </View>
-                  </View>
-                </View>
+            <View style={s.grid}>
+              <TouchableOpacity style={[s.mysteryCard, { borderColor: theme.colors.primary }]} onPress={() => setShowMystery(true)} activeOpacity={0.85}>
+                <Image source={DICE} style={s.mysteryImg} resizeMode="cover" /><LinearGradient colors={['transparent', 'rgba(0,0,0,0.8)']} locations={[0.3, 1]} style={StyleSheet.absoluteFillObject} />
+                <View style={s.mysteryContent}><View style={[s.priceTag, { backgroundColor: theme.colors.primary }]}><Text style={s.priceText}>$4.99</Text></View><View style={s.flex1} /><View><Text style={s.mysteryTitle}>Mystery Box</Text><View style={s.tapTag}><Text style={[s.tapText, { color: theme.colors.primary }]}>TAP TO OPEN</Text></View></View></View>
               </TouchableOpacity>
-            ))}
-          </View>
-
-          <View style={{ height: 24 }} />
-        </ScrollView>
-
-        <Modal visible={!!selectedStack} transparent animationType="fade" onRequestClose={() => setSelectedStack(null)}>
-          {selectedStack && (
-            <View style={{ flex: 1, backgroundColor: theme.colors.overlay, justifyContent: 'center', alignItems: 'center', padding: 20 }}>
-              <View style={{ backgroundColor: theme.colors.modalBackground, borderRadius: 20, padding: 20, width: '100%', maxWidth: 340, alignItems: 'center', borderWidth: 1, borderColor: theme.colors.cardBorder }}>
-                <TouchableOpacity style={{ position: 'absolute', top: 12, right: 12, zIndex: 10, padding: 6 }} onPress={() => setSelectedStack(null)}>
-                  <X color={theme.colors.textSecondary} size={24} />
-                </TouchableOpacity>
-                {selectedStack.count > 1 && (
-                  <View style={{ backgroundColor: theme.colors.primary, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, marginBottom: 12 }}>
-                    <Text style={{ fontSize: 12, fontWeight: '800', color: '#0F172A' }}>{selectedStack.count}X OWNED</Text>
-                  </View>
-                )}
-                <SkeletonImage source={getHeroImageSource(selectedStack.hero.image_url)} style={{ width: 140, height: 140, borderRadius: 16, marginBottom: 16 }} />
-                <Text style={{ fontSize: 20, fontWeight: '800', color: theme.colors.text, marginBottom: 10, textAlign: 'center' }}>{selectedStack.hero.name}</Text>
-                <View style={{ paddingHorizontal: 14, paddingVertical: 6, borderRadius: 16, marginBottom: 12, backgroundColor: selectedStack.hero.hero_rarities.color_hex + '20' }}>
-                  <Text style={{ fontSize: 12, fontWeight: '700', color: selectedStack.hero.hero_rarities.color_hex }}>
-                    {selectedStack.hero.hero_rarities.name} (Tier {selectedStack.hero.hero_rarities.tier})
-                  </Text>
-                </View>
-                <Text style={{ fontSize: 12, color: theme.colors.textSecondary, textAlign: 'center', lineHeight: 18, marginBottom: 16 }}>{selectedStack.hero.hero_rarities.description}</Text>
-                <View style={{ flexDirection: 'row', gap: 24, marginBottom: 16 }}>
-                  <View style={{ alignItems: 'center' }}>
-                    <Coins color={theme.colors.primary} size={20} />
-                    <Text style={{ fontSize: 20, fontWeight: '700', color: theme.colors.text, marginTop: 6 }}>
-                      {selectedStack.count > 1 ? `${selectedStack.count}×${selectedStack.hero.hero_rarities.supercash_per_hour}` : selectedStack.hero.hero_rarities.supercash_per_hour}
-                    </Text>
-                    <Text style={{ fontSize: 10, color: theme.colors.textSecondary, marginTop: 2 }}>SC/hr</Text>
-                  </View>
-                  <View style={{ alignItems: 'center' }}>
-                    <Flame color={theme.colors.purple} size={20} />
-                    <Text style={{ fontSize: 20, fontWeight: '700', color: theme.colors.text, marginTop: 6 }}>
-                      {selectedStack.count * selectedStack.hero.hero_rarities.supercash_per_hour * 10}
-                    </Text>
-                    <Text style={{ fontSize: 10, color: theme.colors.textSecondary, marginTop: 2 }}>Power</Text>
-                  </View>
-                  <View style={{ alignItems: 'center' }}>
-                    <Layers color={theme.colors.info} size={20} />
-                    <Text style={{ fontSize: 20, fontWeight: '700', color: theme.colors.text, marginTop: 6 }}>
-                      {selectedStack.activeCount}/{selectedStack.count}
-                    </Text>
-                    <Text style={{ fontSize: 10, color: theme.colors.textSecondary, marginTop: 2 }}>Active</Text>
-                  </View>
-                </View>
-                {selectedStack.isAnyActive ? (
-                  <>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: theme.colors.successLight, paddingHorizontal: 16, paddingVertical: 12, borderRadius: 10, width: '100%', justifyContent: 'center' }}>
-                      <Check color={theme.colors.success} size={20} />
-                      <Text style={{ fontSize: 12, fontWeight: '600', color: theme.colors.success }}>{selectedStack.activeCount} of {selectedStack.count} Active & Earning</Text>
-                    </View>
-                    <TouchableOpacity
-                      style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 10, marginTop: 8, backgroundColor: theme.colors.errorLight, borderRadius: 8, borderWidth: 1, borderColor: `${theme.colors.error}50`, width: '100%' }}
-                      onPress={() => handleDeactivateStack(selectedStack.hero_id)}
-                      disabled={deactivating === selectedStack.hero_id}
-                    >
-                      {deactivating === selectedStack.hero_id ? <ActivityIndicator color={theme.colors.error} size="small" /> : (
-                        <>
-                          <Zap color={theme.colors.error} size={16} />
-                          <Text style={{ fontSize: 12, fontWeight: '600', color: theme.colors.error }}>Deactivate All</Text>
-                        </>
-                      )}
-                    </TouchableOpacity>
-                  </>
-                ) : (
-                  <TouchableOpacity
-                    style={{ width: '100%', borderRadius: 10, overflow: 'hidden' }}
-                    onPress={() => handleActivateStack(selectedStack.hero_id)}
-                    disabled={activating === selectedStack.hero_id}
-                  >
-                    <LinearGradient colors={theme.gradients.primary} style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 14 }}>
-                      {activating === selectedStack.hero_id ? <ActivityIndicator color="#0F172A" /> : (
-                        <>
-                          <Zap color="#0F172A" size={20} />
-                          <Text style={{ fontSize: 14, fontWeight: '700', color: '#0F172A' }}>ACTIVATE ALL ({selectedStack.count})</Text>
-                        </>
-                      )}
-                    </LinearGradient>
-                  </TouchableOpacity>
-                )}
-              </View>
+              {filtered.map(st => <HeroGridCard key={st.hero_id} stack={st} theme={theme} onPress={() => setSelected(st)} />)}
             </View>
-          )}
-        </Modal>
-
-        <Modal visible={showMysteryModal} transparent animationType="fade" onRequestClose={handleCloseMysteryModal}>
-          <View style={{ flex: 1, backgroundColor: theme.colors.overlay, justifyContent: 'center', alignItems: 'center', padding: 20 }}>
-            <View style={{ backgroundColor: theme.colors.modalBackground, borderRadius: 20, padding: 24, width: '100%', maxWidth: 320, alignItems: 'center', borderWidth: 2, borderColor: `${theme.colors.primary}66` }}>
-              <TouchableOpacity style={{ position: 'absolute', top: 12, right: 12, zIndex: 10, padding: 6 }} onPress={handleCloseMysteryModal}>
-                <X color={theme.colors.textSecondary} size={24} />
-              </TouchableOpacity>
-              {revealedHero ? (
-                <>
-                  <View style={{ width: 80, height: 80, borderRadius: 40, backgroundColor: 'rgba(251, 191, 36, 0.15)', justifyContent: 'center', alignItems: 'center', marginBottom: 16 }}>
-                    <Sparkles color={theme.colors.primary} size={48} />
-                  </View>
-                  <Text style={{ fontSize: 24, fontWeight: '800', color: theme.colors.text, marginBottom: 16 }}>Hero Obtained!</Text>
-                  <SkeletonImage source={getHeroImageSource(revealedHero.image_url)} style={{ width: 120, height: 120, borderRadius: 16, marginBottom: 12 }} />
-                  <Text style={{ fontSize: 20, fontWeight: '800', color: theme.colors.text, marginBottom: 8 }}>{revealedHero.name}</Text>
-                  <View style={{ paddingHorizontal: 14, paddingVertical: 6, borderRadius: 16, marginBottom: 12, backgroundColor: revealedHero.hero_rarities.color_hex + '20' }}>
-                    <Text style={{ fontSize: 12, fontWeight: '700', color: revealedHero.hero_rarities.color_hex }}>{revealedHero.hero_rarities.name}</Text>
-                  </View>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 8, marginBottom: 20 }}>
-                    <Coins color={theme.colors.primary} size={16} />
-                    <Text style={{ fontSize: 16, fontWeight: '700', color: theme.colors.primary }}>{revealedHero.hero_rarities.supercash_per_hour} SC/hr</Text>
-                  </View>
-                  <TouchableOpacity style={{ backgroundColor: theme.colors.primary, paddingHorizontal: 32, paddingVertical: 14, borderRadius: 12 }} onPress={handleCloseMysteryModal}>
-                    <Text style={{ fontSize: 16, fontWeight: '700', color: '#0F172A' }}>Awesome!</Text>
-                  </TouchableOpacity>
-                </>
-              ) : (
-                <>
-                  <Image source={goldenDice} style={{ width: 140, height: 120, marginBottom: 16 }} resizeMode="contain" />
-                  <Text style={{ fontSize: 24, fontWeight: '800', color: theme.colors.text, marginBottom: 8 }}>Mystery Box</Text>
-                  <Text style={{ fontSize: 13, color: theme.colors.textSecondary, textAlign: 'center', lineHeight: 20, marginBottom: 20 }}>
-                    Get a random hero! Duplicates stack and multiply your SC earnings!
-                  </Text>
-                  <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 4, marginBottom: 24 }}>
-                    <Text style={{ fontSize: 36, fontWeight: '900', color: theme.colors.primary }}>$4.99</Text>
-                    <Text style={{ fontSize: 14, fontWeight: '600', color: theme.colors.textSecondary }}>USD</Text>
-                  </View>
-                  <TouchableOpacity style={{ width: '100%', borderRadius: 12, overflow: 'hidden' }} onPress={handlePurchaseMysteryBox} disabled={purchasingMystery}>
-                    <LinearGradient colors={theme.gradients.primary} style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, paddingVertical: 16 }}>
-                      {purchasingMystery ? <ActivityIndicator color="#0F172A" /> : (
-                        <>
-                          <Gift color="#0F172A" size={20} />
-                          <Text style={{ fontSize: 15, fontWeight: '800', color: '#0F172A' }}>OPEN MYSTERY BOX</Text>
-                        </>
-                      )}
-                    </LinearGradient>
-                  </TouchableOpacity>
-                </>
-              )}
-            </View>
-          </View>
-        </Modal>
-
-        <Modal visible={showClaimModal} transparent animationType="fade" onRequestClose={() => setShowClaimModal(false)}>
-          <View style={{ flex: 1, backgroundColor: theme.colors.overlay, justifyContent: 'center', alignItems: 'center', padding: 20 }}>
-            <View style={{ backgroundColor: theme.colors.modalBackground, borderRadius: 20, padding: 28, alignItems: 'center', maxWidth: 300, borderWidth: 1, borderColor: theme.colors.cardBorder }}>
-              <View style={{ width: 72, height: 72, borderRadius: 36, backgroundColor: 'rgba(251, 191, 36, 0.15)', justifyContent: 'center', alignItems: 'center', marginBottom: 16 }}>
-                <Sparkles color={theme.colors.primary} size={48} />
-              </View>
-              <Text style={{ fontSize: 20, fontWeight: '800', color: theme.colors.text, marginBottom: 10 }}>Hero Claimed!</Text>
-              <Text style={{ fontSize: 12, color: theme.colors.textSecondary, textAlign: 'center', lineHeight: 18, marginBottom: 20 }}>
-                You received {starterHero?.name}! Tap Activate to start earning SuperCash.
-              </Text>
-              <TouchableOpacity style={{ backgroundColor: theme.colors.primary, paddingHorizontal: 28, paddingVertical: 12, borderRadius: 10 }} onPress={() => setShowClaimModal(false)}>
-                <Text style={{ fontSize: 14, fontWeight: '700', color: '#0F172A' }}>Awesome!</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </Modal>
+            <View style={s.spacer} />
+          </ScrollView>
+          <HeroModal stack={selected} theme={theme} onClose={() => setSelected(null)} activating={activating} deactivating={deactivating} onActivate={onActivate} onDeactivate={onDeactivate} />
+          <MysteryModal visible={showMystery} theme={theme} revealed={revealed} purchasing={purchasing} onPurchase={onPurchase} onClose={closeMystery} />
+          <ClaimModal visible={showClaim} theme={theme} hero={starter} onClose={() => setShowClaim(false)} />
         </SafeAreaView>
       </View>
     </ImageBackground>
   );
 }
+
+const StatBox = ({ icon: Icon, color, value, label, theme }: any) => (
+  <View style={[s.statBox, { backgroundColor: theme.colors.card, borderColor: color }]}><View style={[s.statIcon, { backgroundColor: `${color}20` }]}><Icon color={color} size={16} /></View><Text style={[s.statVal, { color: theme.colors.text }]}>{value}</Text><Text style={[s.statLbl, { color: theme.colors.textSecondary }]}>{label}</Text></View>
+);
+
+const HeroGridCard = ({ stack, theme, onPress }: any) => (
+  <TouchableOpacity style={[s.heroCard, { backgroundColor: theme.colors.card, borderColor: stack.isAnyRevealed ? (stack.isAnyActive ? stack.hero.hero_rarities.color_hex : theme.colors.cardBorder) : theme.colors.primary }]} onPress={onPress} activeOpacity={0.85}>
+    <SkeletonImage source={getHeroImageSource(stack.hero.image_url)} style={s.heroImg} /><LinearGradient colors={theme.gradients.hero} locations={[0.1, 1]} style={StyleSheet.absoluteFillObject} />
+    {stack.count > 1 && <View style={[s.countBadge, { backgroundColor: theme.colors.primary }]}><Text style={s.countText}>{stack.count}X</Text></View>}
+    {stack.isAnyActive && stack.isAnyRevealed && <View style={[s.activeBadge, { backgroundColor: theme.colors.success }]}><Sparkles color="#FFF" size={10} /><Text style={s.activeText}>ACTIVE</Text></View>}
+    <View style={s.heroInfo}><Text style={s.heroName} numberOfLines={1}>{stack.isAnyRevealed ? stack.hero.name : '???'}</Text><View style={s.heroMeta}><View style={[s.rarityTag, { backgroundColor: stack.isAnyRevealed ? stack.hero.hero_rarities.color_hex + '25' : 'rgba(251,191,36,0.2)' }]}><Text style={[s.rarityText, { color: stack.isAnyRevealed ? stack.hero.hero_rarities.color_hex : theme.colors.primary }]}>{stack.isAnyRevealed ? stack.hero.hero_rarities.name : '???'}</Text></View><View style={s.scTag}><Coins color={theme.colors.primary} size={14} /><Text style={[s.scText, { color: theme.colors.primary }]}>{stack.isAnyRevealed ? `${stack.hero.hero_rarities.supercash_per_hour}/hr` : '???'}</Text></View></View></View>
+  </TouchableOpacity>
+);
+
+const HeroModal = ({ stack, theme, onClose, activating, deactivating, onActivate, onDeactivate }: any) => (
+  <Modal visible={!!stack} transparent animationType="fade" onRequestClose={onClose}>{stack && (
+    <View style={[s.modalBg, { backgroundColor: theme.colors.overlay }]}><View style={[s.modalCard, { backgroundColor: theme.colors.modalBackground, borderColor: theme.colors.cardBorder }]}>
+      <TouchableOpacity style={s.closeBtn} onPress={onClose}><X color={theme.colors.textSecondary} size={24} /></TouchableOpacity>
+      {stack.count > 1 && <View style={[s.ownedBadge, { backgroundColor: theme.colors.primary }]}><Text style={s.ownedText}>{stack.count}X OWNED</Text></View>}
+      <SkeletonImage source={getHeroImageSource(stack.hero.image_url)} style={s.modalImg} />
+      <Text style={[s.modalName, { color: theme.colors.text }]}>{stack.hero.name}</Text>
+      <View style={[s.tierTag, { backgroundColor: stack.hero.hero_rarities.color_hex + '20' }]}><Text style={[s.tierText, { color: stack.hero.hero_rarities.color_hex }]}>{stack.hero.hero_rarities.name} (Tier {stack.hero.hero_rarities.tier})</Text></View>
+      <Text style={[s.desc, { color: theme.colors.textSecondary }]}>{stack.hero.hero_rarities.description}</Text>
+      <View style={s.modalStats}><ModalStat icon={Coins} color={theme.colors.primary} value={stack.count > 1 ? `${stack.count}×${stack.hero.hero_rarities.supercash_per_hour}` : stack.hero.hero_rarities.supercash_per_hour} label="SC/hr" theme={theme} /><ModalStat icon={Flame} color={theme.colors.purple} value={stack.count * stack.hero.hero_rarities.supercash_per_hour * 10} label="Power" theme={theme} /><ModalStat icon={Layers} color={theme.colors.info} value={`${stack.activeCount}/${stack.count}`} label="Active" theme={theme} /></View>
+      {stack.isAnyActive ? (<><View style={[s.activeRow, { backgroundColor: theme.colors.successLight }]}><Check color={theme.colors.success} size={20} /><Text style={[s.activeInfo, { color: theme.colors.success }]}>{stack.activeCount} of {stack.count} Active & Earning</Text></View><TouchableOpacity style={[s.deactBtn, { backgroundColor: theme.colors.errorLight, borderColor: `${theme.colors.error}50` }]} onPress={() => onDeactivate(stack.hero_id)} disabled={deactivating === stack.hero_id}>{deactivating === stack.hero_id ? <ActivityIndicator color={theme.colors.error} size="small" /> : <><Zap color={theme.colors.error} size={16} /><Text style={[s.deactText, { color: theme.colors.error }]}>Deactivate All</Text></>}</TouchableOpacity></>) : (
+        <TouchableOpacity style={s.actBtn} onPress={() => onActivate(stack.hero_id)} disabled={activating === stack.hero_id}><LinearGradient colors={theme.gradients.primary} style={s.actGrad}>{activating === stack.hero_id ? <ActivityIndicator color="#0F172A" /> : <><Zap color="#0F172A" size={20} /><Text style={s.actText}>ACTIVATE ALL ({stack.count})</Text></>}</LinearGradient></TouchableOpacity>
+      )}
+    </View></View>
+  )}</Modal>
+);
+
+const ModalStat = ({ icon: Icon, color, value, label, theme }: any) => (
+  <View style={s.mStat}><Icon color={color} size={20} /><Text style={[s.mStatVal, { color: theme.colors.text }]}>{value}</Text><Text style={[s.mStatLbl, { color: theme.colors.textSecondary }]}>{label}</Text></View>
+);
+
+const MysteryModal = ({ visible, theme, revealed, purchasing, onPurchase, onClose }: any) => (
+  <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}><View style={[s.modalBg, { backgroundColor: theme.colors.overlay }]}><View style={[s.mysteryModal, { backgroundColor: theme.colors.modalBackground, borderColor: `${theme.colors.primary}66` }]}>
+    <TouchableOpacity style={s.closeBtn} onPress={onClose}><X color={theme.colors.textSecondary} size={24} /></TouchableOpacity>
+    {revealed ? (<><View style={s.revealIcon}><Sparkles color={theme.colors.primary} size={48} /></View><Text style={[s.revealTitle, { color: theme.colors.text }]}>Hero Obtained!</Text><SkeletonImage source={getHeroImageSource(revealed.image_url)} style={s.revealImg} /><Text style={[s.revealName, { color: theme.colors.text }]}>{revealed.name}</Text><View style={[s.revealTag, { backgroundColor: revealed.hero_rarities.color_hex + '20' }]}><Text style={[s.revealRarity, { color: revealed.hero_rarities.color_hex }]}>{revealed.hero_rarities.name}</Text></View><View style={s.revealSc}><Coins color={theme.colors.primary} size={16} /><Text style={[s.revealScText, { color: theme.colors.primary }]}>{revealed.hero_rarities.supercash_per_hour} SC/hr</Text></View><TouchableOpacity style={[s.awesomeBtn, { backgroundColor: theme.colors.primary }]} onPress={onClose}><Text style={s.awesomeText}>Awesome!</Text></TouchableOpacity></>) : (
+      <><Image source={DICE} style={s.diceImg} resizeMode="contain" /><Text style={[s.mysteryTitleModal, { color: theme.colors.text }]}>Mystery Box</Text><Text style={[s.mysteryDesc, { color: theme.colors.textSecondary }]}>Get a random hero! Duplicates stack and multiply your SC earnings!</Text><View style={s.priceRow}><Text style={[s.priceNum, { color: theme.colors.primary }]}>$4.99</Text><Text style={[s.priceUnit, { color: theme.colors.textSecondary }]}>USD</Text></View><TouchableOpacity style={s.openBtn} onPress={onPurchase} disabled={purchasing}><LinearGradient colors={theme.gradients.primary} style={s.openGrad}>{purchasing ? <ActivityIndicator color="#0F172A" /> : <><Gift color="#0F172A" size={20} /><Text style={s.openText}>OPEN MYSTERY BOX</Text></>}</LinearGradient></TouchableOpacity></>
+    )}
+  </View></View></Modal>
+);
+
+const ClaimModal = ({ visible, theme, hero, onClose }: any) => (
+  <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}><View style={[s.modalBg, { backgroundColor: theme.colors.overlay }]}><View style={[s.claimModal, { backgroundColor: theme.colors.modalBackground, borderColor: theme.colors.cardBorder }]}><View style={s.claimModalIcon}><Sparkles color={theme.colors.primary} size={48} /></View><Text style={[s.claimModalTitle, { color: theme.colors.text }]}>Hero Claimed!</Text><Text style={[s.claimModalSub, { color: theme.colors.textSecondary }]}>You received {hero?.name}! Tap Activate to start earning SuperCash.</Text><TouchableOpacity style={[s.awesomeBtn, { backgroundColor: theme.colors.primary }]} onPress={onClose}><Text style={s.awesomeText}>Awesome!</Text></TouchableOpacity></View></View></Modal>
+);
+
+const s = StyleSheet.create({
+  bg: { flex: 1, width, height },
+  overlay: { flex: 1 },
+  flex1: { flex: 1 },
+  scroll: { flex: 1, paddingHorizontal: 16, paddingTop: 12 },
+  spacer: { height: 24 },
+  loadCenter: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  loadText: { marginTop: 16, fontSize: 14 },
+  errorBar: { marginHorizontal: 16, borderRadius: 12, padding: 12, marginBottom: 12, borderWidth: 1 },
+  statsRow: { flexDirection: 'row', gap: 8, marginBottom: 14 },
+  statBox: { flex: 1, borderRadius: 12, padding: 10, alignItems: 'center', borderWidth: 1 },
+  statIcon: { width: 28, height: 28, borderRadius: 8, justifyContent: 'center', alignItems: 'center', marginBottom: 4 },
+  statVal: { fontSize: 16, fontWeight: '700' },
+  statLbl: { fontSize: 9 },
+  claimBtn: { borderRadius: 14, overflow: 'hidden', marginBottom: 14 },
+  claimGrad: { padding: 16, flexDirection: 'row', alignItems: 'center' },
+  claimIcon: { width: 48, height: 48, borderRadius: 14, backgroundColor: 'rgba(255,255,255,0.2)', justifyContent: 'center', alignItems: 'center', marginRight: 12 },
+  claimTitle: { fontSize: 14, fontWeight: '700', color: '#FFF', marginBottom: 2 },
+  claimSub: { fontSize: 11, color: 'rgba(255,255,255,0.8)' },
+  claimAction: { backgroundColor: '#FFF', paddingHorizontal: 16, paddingVertical: 10, borderRadius: 10 },
+  claimActionText: { fontSize: 12, fontWeight: '700' },
+  filterRow: { flexDirection: 'row', gap: 8, marginBottom: 14 },
+  filterBtn: { flex: 1, paddingVertical: 10, paddingHorizontal: 8, borderRadius: 10, borderWidth: 1, alignItems: 'center' },
+  filterText: { fontSize: 12, fontWeight: '600' },
+  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 20 },
+  mysteryCard: { width: (width - 42) / 2, height: 220, borderRadius: 16, overflow: 'hidden', borderWidth: 2 },
+  mysteryImg: { width: '100%', height: '100%', position: 'absolute' },
+  mysteryContent: { flex: 1, justifyContent: 'space-between', padding: 12 },
+  priceTag: { alignSelf: 'flex-end', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 8 },
+  priceText: { fontSize: 11, fontWeight: '800', color: '#0F172A' },
+  mysteryTitle: { fontSize: 15, fontWeight: '800', color: '#FFF', marginBottom: 8 },
+  tapTag: { alignSelf: 'flex-start', backgroundColor: 'rgba(251,191,36,0.3)', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 6 },
+  tapText: { fontSize: 10, fontWeight: '700' },
+  heroCard: { width: (width - 42) / 2, height: 220, borderRadius: 16, overflow: 'hidden', borderWidth: 2, position: 'relative' },
+  heroImg: { width: '100%', height: '100%', position: 'absolute' },
+  countBadge: { position: 'absolute', top: 8, left: 8, zIndex: 10, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 8 },
+  countText: { fontSize: 12, fontWeight: '900', color: '#0F172A' },
+  activeBadge: { position: 'absolute', top: 8, right: 8, zIndex: 10, flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 8, paddingVertical: 5, borderRadius: 8 },
+  activeText: { fontSize: 9, fontWeight: '800', color: '#FFF' },
+  heroInfo: { position: 'absolute', bottom: 0, left: 0, right: 0, padding: 12 },
+  heroName: { fontSize: 15, fontWeight: '800', color: '#FFF', marginBottom: 8 },
+  heroMeta: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  rarityTag: { paddingHorizontal: 10, paddingVertical: 5, borderRadius: 6 },
+  rarityText: { fontSize: 11, fontWeight: '700' },
+  scTag: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: 'rgba(251,191,36,0.15)', paddingHorizontal: 8, paddingVertical: 5, borderRadius: 6 },
+  scText: { fontSize: 12, fontWeight: '700' },
+  modalBg: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 },
+  modalCard: { borderRadius: 20, padding: 20, width: '100%', maxWidth: 340, alignItems: 'center', borderWidth: 1 },
+  closeBtn: { position: 'absolute', top: 12, right: 12, zIndex: 10, padding: 6 },
+  ownedBadge: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, marginBottom: 12 },
+  ownedText: { fontSize: 12, fontWeight: '800', color: '#0F172A' },
+  modalImg: { width: 140, height: 140, borderRadius: 16, marginBottom: 16 },
+  modalName: { fontSize: 20, fontWeight: '800', marginBottom: 10, textAlign: 'center' },
+  tierTag: { paddingHorizontal: 14, paddingVertical: 6, borderRadius: 16, marginBottom: 12 },
+  tierText: { fontSize: 12, fontWeight: '700' },
+  desc: { fontSize: 12, textAlign: 'center', lineHeight: 18, marginBottom: 16 },
+  modalStats: { flexDirection: 'row', gap: 24, marginBottom: 16 },
+  mStat: { alignItems: 'center' },
+  mStatVal: { fontSize: 20, fontWeight: '700', marginTop: 6 },
+  mStatLbl: { fontSize: 10, marginTop: 2 },
+  activeRow: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 16, paddingVertical: 12, borderRadius: 10, width: '100%', justifyContent: 'center' },
+  activeInfo: { fontSize: 12, fontWeight: '600' },
+  deactBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 10, marginTop: 8, borderRadius: 8, borderWidth: 1, width: '100%' },
+  deactText: { fontSize: 12, fontWeight: '600' },
+  actBtn: { width: '100%', borderRadius: 10, overflow: 'hidden' },
+  actGrad: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 14 },
+  actText: { fontSize: 14, fontWeight: '700', color: '#0F172A' },
+  mysteryModal: { borderRadius: 20, padding: 24, width: '100%', maxWidth: 320, alignItems: 'center', borderWidth: 2 },
+  diceImg: { width: 140, height: 120, marginBottom: 16 },
+  mysteryTitleModal: { fontSize: 24, fontWeight: '800', marginBottom: 8 },
+  mysteryDesc: { fontSize: 13, textAlign: 'center', lineHeight: 20, marginBottom: 20 },
+  priceRow: { flexDirection: 'row', alignItems: 'baseline', gap: 4, marginBottom: 24 },
+  priceNum: { fontSize: 36, fontWeight: '900' },
+  priceUnit: { fontSize: 14, fontWeight: '600' },
+  openBtn: { width: '100%', borderRadius: 12, overflow: 'hidden' },
+  openGrad: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, paddingVertical: 16 },
+  openText: { fontSize: 15, fontWeight: '800', color: '#0F172A' },
+  revealIcon: { width: 80, height: 80, borderRadius: 40, backgroundColor: 'rgba(251,191,36,0.15)', justifyContent: 'center', alignItems: 'center', marginBottom: 16 },
+  revealTitle: { fontSize: 24, fontWeight: '800', marginBottom: 16 },
+  revealImg: { width: 120, height: 120, borderRadius: 16, marginBottom: 12 },
+  revealName: { fontSize: 20, fontWeight: '800', marginBottom: 8 },
+  revealTag: { paddingHorizontal: 14, paddingVertical: 6, borderRadius: 16, marginBottom: 12 },
+  revealRarity: { fontSize: 12, fontWeight: '700' },
+  revealSc: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 8, marginBottom: 20 },
+  revealScText: { fontSize: 16, fontWeight: '700' },
+  awesomeBtn: { paddingHorizontal: 32, paddingVertical: 14, borderRadius: 12 },
+  awesomeText: { fontSize: 16, fontWeight: '700', color: '#0F172A' },
+  claimModal: { borderRadius: 20, padding: 28, alignItems: 'center', maxWidth: 300, borderWidth: 1 },
+  claimModalIcon: { width: 72, height: 72, borderRadius: 36, backgroundColor: 'rgba(251,191,36,0.15)', justifyContent: 'center', alignItems: 'center', marginBottom: 16 },
+  claimModalTitle: { fontSize: 20, fontWeight: '800', marginBottom: 10 },
+  claimModalSub: { fontSize: 12, textAlign: 'center', lineHeight: 18, marginBottom: 20 },
+});
