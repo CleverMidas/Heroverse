@@ -27,7 +27,7 @@ $$;
 CREATE OR REPLACE FUNCTION public.collect_supercash(p_user_id uuid)
 RETURNS bigint
 LANGUAGE plpgsql
-SECURITY DEFINER
+SECURITY DEFINER SET search_path = ''
 AS $$
 DECLARE
   pending_amount bigint;
@@ -46,4 +46,3 @@ BEGIN
   RETURN COALESCE(pending_amount, 0);
 END;
 $$;
-

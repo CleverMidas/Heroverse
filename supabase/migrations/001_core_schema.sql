@@ -77,15 +77,15 @@ INSERT INTO hero_rarities (name, tier, supercash_per_hour, color_hex, descriptio
 ON CONFLICT (name) DO NOTHING;
 
 INSERT INTO heroes (name, rarity_id, image_url, is_starter) VALUES
-  ('Guardian Nova', 1, 'https://jwacklfxfscwcmlzmcqa.supabase.co/storage/v1/object/public/heroes/hero_3.jpg', true),
-  ('Shadow Striker', 1, 'https://jwacklfxfscwcmlzmcqa.supabase.co/storage/v1/object/public/heroes/hero_1.jpg', false),
-  ('Storm Warden', 2, 'https://jwacklfxfscwcmlzmcqa.supabase.co/storage/v1/object/public/heroes/hero_5.jpg', false),
-  ('Frost Knight', 2, 'https://jwacklfxfscwcmlzmcqa.supabase.co/storage/v1/object/public/heroes/hero_2.jpg', false),
-  ('Blaze Phoenix', 3, 'https://jwacklfxfscwcmlzmcqa.supabase.co/storage/v1/object/public/heroes/hero_6.jpg', false),
-  ('Thunder Lord', 3, 'https://jwacklfxfscwcmlzmcqa.supabase.co/storage/v1/object/public/heroes/hero_4.jpg', false),
-  ('Void Walker', 4, 'https://jwacklfxfscwcmlzmcqa.supabase.co/storage/v1/object/public/heroes/hero_7.jpg', false),
-  ('Crimson Fury', 4, 'https://jwacklfxfscwcmlzmcqa.supabase.co/storage/v1/object/public/heroes/hero_8.jpg', false),
-  ('Golden Titan', 5, 'https://jwacklfxfscwcmlzmcqa.supabase.co/storage/v1/object/public/heroes/hero_9.jpg', false);
+  ('Guardian Nova', 1, 'hero_3.jpg', true),
+  ('Shadow Striker', 1, 'hero_1.jpg', false),
+  ('Storm Warden', 2, 'hero_5.jpg', false),
+  ('Frost Knight', 2, 'hero_2.jpg', false),
+  ('Blaze Phoenix', 3, 'hero_6.jpg', false),
+  ('Thunder Lord', 3, 'hero_4.jpg', false),
+  ('Void Walker', 4, 'hero_7.jpg', false),
+  ('Crimson Fury', 4, 'hero_8.jpg', false),
+  ('Golden Titan', 5, 'hero_9.jpg', false);
 
 ALTER PUBLICATION supabase_realtime ADD TABLE profiles;
 
