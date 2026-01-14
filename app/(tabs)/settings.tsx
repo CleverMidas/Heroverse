@@ -7,16 +7,17 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useGame } from '@/contexts/GameContext';
 import { useTheme } from '@/contexts/ThemeContext';
 import { supabase } from '@/lib/supabase';
-import { User, LogOut, Shield, HelpCircle, Mail, ChevronRight, Zap, Info, Bell, Globe, Gift, Copy, Twitter, MessageCircle, Coins, TrendingUp, Users, Check, X, Edit3, Sun, Moon, Plus, AlertCircle, CheckCircle } from 'lucide-react-native';
+import { User, LogOut, Shield, HelpCircle, Mail, ChevronRight, Zap, Info, Bell, Globe, Gift, Copy, Twitter, MessageCircle, Coins, TrendingUp, Users, Check, X, Edit3, Sun, Moon, Plus, AlertCircle, CheckCircle, Smartphone, Key } from 'lucide-react-native';
 
 const { width, height } = Dimensions.get('window');
 const BG = require('@/assets/home_bg.jpg');
 
 interface ReferralStats { referral_code: string; invite_count: number; total_earned: number; used_referral_code: string | null; }
+interface MFAFactor { id: string; type: string; friendly_name?: string; }
 
 export default function SettingsScreen() {
   const router = useRouter();
-  const { user, profile, signOut, updateProfile, changePassword, refreshProfile } = useAuth();
+  const { user, profile, signOut, updateProfile, changePassword, refreshProfile, checkMFAStatus } = useAuth();
   const { stackedHeroes } = useGame();
   const { theme, isDark, toggleTheme } = useTheme();
   const [pushNotifications, setPushNotifications] = useState(true);
@@ -36,6 +37,17 @@ export default function SettingsScreen() {
   const [referralError, setReferralError] = useState<string | null>(null);
   const [referralSuccess, setReferralSuccess] = useState<string | null>(null);
   const [hasUsedReferral, setHasUsedReferral] = useState(false);
+  const [mfaEnabled, setMfaEnabled] = useState(false);
+  const [mfaFactors, setMfaFactors] = useState<MFAFactor[]>([]);
+  const [loadingMFA, setLoadingMFA] = useState(true);
+  const [showMFAModal, setShowMFAModal] = useState(false);
+  const [mfaStep, setMfaStep] = useState<'setup' | 'verify' | 'disable'>('setup');
+  const [totpSecret, setTotpSecret] = useState('');
+  const [totpCode, setTotpCode] = useState('');
+  const [mfaFactorId, setMfaFactorId] = useState('');
+  const [mfaError, setMfaError] = useState<string | null>(null);
+  const [mfaLoading, setMfaLoading] = useState(false);
+  const [secretCopied, setSecretCopied] = useState(false);
 
   const { totalHeroCount, totalEarningRate } = useMemo(() => ({
     totalHeroCount: stackedHeroes.reduce((sum, s) => sum + s.count, 0),
@@ -61,6 +73,86 @@ export default function SettingsScreen() {
   }, [profile]);
 
   useEffect(() => { fetchReferralStats(); }, [fetchReferralStats]);
+
+  const fetchMFAStatus = useCallback(async () => {
+    setLoadingMFA(true);
+    try {
+      const { data, error } = await supabase.auth.mfa.listFactors();
+      if (!error && data) {
+        const verifiedFactors = data.totp.filter((f: any) => f.status === 'verified');
+        setMfaFactors(verifiedFactors);
+        setMfaEnabled(verifiedFactors.length > 0);
+      }
+    } catch { setMfaEnabled(false); }
+    setLoadingMFA(false);
+  }, []);
+
+  useEffect(() => { fetchMFAStatus(); }, [fetchMFAStatus]);
+
+  const handleEnrollMFA = async () => {
+    setMfaError(null);
+    setMfaLoading(true);
+    try {
+      const { data: existingFactors } = await supabase.auth.mfa.listFactors();
+      const unverifiedFactors = existingFactors?.totp?.filter((f: any) => f.status === 'unverified') || [];
+      for (const factor of unverifiedFactors) {
+        await supabase.auth.mfa.unenroll({ factorId: factor.id });
+      }
+      const { data, error } = await supabase.auth.mfa.enroll({ factorType: 'totp', friendlyName: 'Authenticator App' });
+      if (error) { setMfaError(error.message); setMfaLoading(false); return; }
+      if (data) {
+        setTotpSecret(data.totp.secret);
+        setMfaFactorId(data.id);
+        setMfaStep('verify');
+      }
+    } catch (e: any) { setMfaError(e.message || 'Failed to setup MFA'); }
+    setMfaLoading(false);
+  };
+
+  const handleVerifyMFA = async () => {
+    if (totpCode.length !== 6) { setMfaError('Please enter a 6-digit code'); return; }
+    setMfaError(null);
+    setMfaLoading(true);
+    try {
+      const { data: challengeData, error: challengeError } = await supabase.auth.mfa.challenge({ factorId: mfaFactorId });
+      if (challengeError) { setMfaError(challengeError.message); setMfaLoading(false); return; }
+      const { error: verifyError } = await supabase.auth.mfa.verify({ factorId: mfaFactorId, challengeId: challengeData.id, code: totpCode });
+      if (verifyError) { setMfaError('Invalid code. Please try again.'); setMfaLoading(false); return; }
+      setMfaEnabled(true);
+      fetchMFAStatus();
+      await checkMFAStatus();
+      closeMFAModal();
+      Alert.alert('Success', 'Two-factor authentication has been enabled!');
+    } catch (e: any) { setMfaError(e.message || 'Failed to verify code'); }
+    setMfaLoading(false);
+  };
+
+  const handleDisableMFA = async () => {
+    if (totpCode.length !== 6) { setMfaError('Please enter a 6-digit code to confirm'); return; }
+    setMfaError(null);
+    setMfaLoading(true);
+    try {
+      const factor = mfaFactors[0];
+      if (!factor) { setMfaError('No MFA factor found'); setMfaLoading(false); return; }
+      const { data: challengeData, error: challengeError } = await supabase.auth.mfa.challenge({ factorId: factor.id });
+      if (challengeError) { setMfaError(challengeError.message); setMfaLoading(false); return; }
+      const { error: verifyError } = await supabase.auth.mfa.verify({ factorId: factor.id, challengeId: challengeData.id, code: totpCode });
+      if (verifyError) { setMfaError('Invalid code. Please try again.'); setMfaLoading(false); return; }
+      const { error: unenrollError } = await supabase.auth.mfa.unenroll({ factorId: factor.id });
+      if (unenrollError) { setMfaError(unenrollError.message); setMfaLoading(false); return; }
+      setMfaEnabled(false);
+      setMfaFactors([]);
+      await checkMFAStatus();
+      closeMFAModal();
+      Alert.alert('Success', 'Two-factor authentication has been disabled.');
+    } catch (e: any) { setMfaError(e.message || 'Failed to disable MFA'); }
+    setMfaLoading(false);
+  };
+
+  const openMFASetup = () => { setMfaStep('setup'); setTotpCode(''); setTotpSecret(''); setMfaError(null); setShowMFAModal(true); handleEnrollMFA(); };
+  const openMFADisable = () => { setMfaStep('disable'); setTotpCode(''); setMfaError(null); setShowMFAModal(true); };
+  const closeMFAModal = () => { setShowMFAModal(false); setTotpCode(''); setTotpSecret(''); setMfaError(null); setMfaStep('setup'); };
+  const handleCopySecret = async () => { await Clipboard.setStringAsync(totpSecret); setSecretCopied(true); setTimeout(() => setSecretCopied(false), 2000); };
 
   const handleSignOut = () => {
     if (Platform.OS === 'web') { signOut(); router.replace('/(auth)/login'); }
@@ -102,7 +194,6 @@ export default function SettingsScreen() {
 
   const generalMenuItems = [
     { icon: User, title: 'Account', description: 'Manage your profile', color: theme.colors.primary, onPress: handleOpenEditModal },
-    { icon: Shield, title: 'Privacy & Security', description: 'Password & 2FA', color: theme.colors.success, onPress: () => {} },
     { icon: Globe, title: 'Language', description: 'English (US)', color: theme.colors.info, onPress: () => {} },
   ];
 
@@ -119,6 +210,7 @@ export default function SettingsScreen() {
           <ScrollView style={s.scroll} showsVerticalScrollIndicator={false}>
             <ProfileCard profile={profile} user={user} totalHeroCount={totalHeroCount} totalEarningRate={totalEarningRate} theme={theme} onEdit={handleOpenEditModal} />
             <AppearanceSection isDark={isDark} toggleTheme={toggleTheme} theme={theme} />
+            <MFASection mfaEnabled={mfaEnabled} loading={loadingMFA} onEnable={openMFASetup} onDisable={openMFADisable} theme={theme} />
             <ReferralSection referralCode={referralStats?.referral_code || ''} inviteCount={referralStats?.invite_count || 0} totalEarned={referralStats?.total_earned || 0} usedReferralCode={referralStats?.used_referral_code || null} copied={copied} onCopy={handleCopyReferral} loading={loadingStats} hasUsedReferral={hasUsedReferral} onEnterCode={() => setShowReferralModal(true)} theme={theme} />
             <NotificationsSection push={pushNotifications} email={emailNotifications} setPush={setPushNotifications} setEmail={setEmailNotifications} isDark={isDark} theme={theme} />
             <MenuSection title="General" items={generalMenuItems} theme={theme} />
@@ -141,6 +233,19 @@ export default function SettingsScreen() {
               </View>
             </View>
           </Modal>
+          <Modal visible={showMFAModal} transparent animationType="fade" onRequestClose={closeMFAModal}>
+            <View style={[s.modalBg, { backgroundColor: theme.colors.overlay }]}>
+              <View style={[s.modalCard, { backgroundColor: theme.colors.modalBackground }]}>
+                <View style={s.modalHeader}><View style={s.modalHeaderRow}><View style={[s.modalHeaderIcon, { backgroundColor: mfaStep === 'disable' ? 'rgba(239, 68, 68, 0.15)' : 'rgba(34, 197, 94, 0.15)' }]}><Shield color={mfaStep === 'disable' ? '#EF4444' : theme.colors.success} size={24} /></View><Text style={[s.modalHeaderTitle, { color: theme.colors.text }]}>{mfaStep === 'disable' ? 'Disable 2FA' : mfaStep === 'verify' ? 'Verify Setup' : 'Enable 2FA'}</Text></View><TouchableOpacity onPress={closeMFAModal} style={s.closeTouch}><X color={theme.colors.textSecondary} size={24} /></TouchableOpacity></View>
+                {mfaStep === 'setup' && <View style={s.mfaSetupWrap}><ActivityIndicator size="large" color={theme.colors.primary} /><Text style={[s.mfaSetupText, { color: theme.colors.textSecondary }]}>Generating secret key...</Text></View>}
+                {mfaStep === 'verify' && <View><Text style={[s.modalDesc, { color: theme.colors.textSecondary }]}>Add this secret key to your authenticator app (Google Authenticator, Authy, etc.):</Text><View style={[s.secretBox, { backgroundColor: theme.colors.surfaceSecondary, borderColor: theme.colors.cardBorder }]}><Text style={[s.secretText, { color: theme.colors.text }]} selectable>{totpSecret}</Text><TouchableOpacity style={[s.copySecretBtn, secretCopied && { backgroundColor: theme.colors.successLight }]} onPress={handleCopySecret}>{secretCopied ? <Check color={theme.colors.success} size={16} /> : <Copy color={theme.colors.primary} size={16} />}</TouchableOpacity></View>{secretCopied && <Text style={[s.copiedText, { color: theme.colors.success }]}>Copied to clipboard!</Text>}<Text style={[s.mfaInstructions, { color: theme.colors.textSecondary }]}>1. Open your authenticator app{'\n'}2. Add a new account{'\n'}3. Enter this secret key manually{'\n'}4. Enter the 6-digit code below</Text></View>}
+                {mfaStep === 'disable' && <Text style={[s.modalDesc, { color: theme.colors.textSecondary }]}>Enter a code from your authenticator app to confirm disabling two-factor authentication.</Text>}
+                {mfaError && <View style={s.errorRow}><AlertCircle color="#EF4444" size={18} /><Text style={s.errorText}>{mfaError}</Text></View>}
+                {(mfaStep === 'verify' || mfaStep === 'disable') && <View style={s.inputWrap}><Text style={[s.inputLabel, { color: theme.colors.text }]}>Verification Code</Text><TextInput style={[s.codeInput, { backgroundColor: theme.colors.surfaceSecondary, color: theme.colors.text, borderColor: theme.colors.cardBorder, textAlign: 'center', letterSpacing: 8 }]} placeholder="000000" placeholderTextColor={theme.colors.textMuted} value={totpCode} onChangeText={(text) => setTotpCode(text.replace(/[^0-9]/g, ''))} keyboardType="number-pad" maxLength={6} /></View>}
+                {(mfaStep === 'verify' || mfaStep === 'disable') && <TouchableOpacity onPress={mfaStep === 'disable' ? handleDisableMFA : handleVerifyMFA} disabled={mfaLoading || totpCode.length !== 6} style={[s.applyBtn, { backgroundColor: mfaStep === 'disable' ? theme.colors.error : theme.colors.success, opacity: mfaLoading || totpCode.length !== 6 ? 0.6 : 1 }]}>{mfaLoading ? <ActivityIndicator color="#FFFFFF" /> : <Text style={[s.applyText, { color: '#FFFFFF' }]}>{mfaStep === 'disable' ? 'Disable 2FA' : 'Verify & Enable'}</Text>}</TouchableOpacity>}
+              </View>
+            </View>
+          </Modal>
         </SafeAreaView>
       </View>
     </ImageBackground>
@@ -160,6 +265,14 @@ const StatItem = ({ icon: Icon, color, value, label, theme }: any) => (
 
 const AppearanceSection = ({ isDark, toggleTheme, theme }: any) => (
   <View style={s.section}><Text style={[s.sectionTitle, { color: theme.colors.text }]}>Appearance</Text><View style={[s.sectionCard, { backgroundColor: theme.colors.card, borderColor: theme.colors.cardBorder }]}><View style={s.appearRow}><View style={s.appearRowLeft}><View style={[s.appearIcon, { backgroundColor: isDark ? 'rgba(139, 92, 246, 0.15)' : 'rgba(251, 191, 36, 0.15)' }]}>{isDark ? <Moon color={theme.colors.purple} size={20} /> : <Sun color={theme.colors.primary} size={20} />}</View><View><Text style={[s.appearTitle, { color: theme.colors.text }]}>Dark Mode</Text><Text style={[s.appearSub, { color: theme.colors.textSecondary }]}>{isDark ? 'Currently using dark theme' : 'Currently using light theme'}</Text></View></View><Switch value={isDark} onValueChange={toggleTheme} trackColor={{ false: '#E2E8F0', true: 'rgba(139, 92, 246, 0.5)' }} thumbColor={isDark ? theme.colors.purple : '#FBBF24'} /></View></View></View>
+);
+
+const MFASection = ({ mfaEnabled, loading, onEnable, onDisable, theme }: any) => (
+  <View style={s.section}><Text style={[s.sectionTitle, { color: theme.colors.text }]}>Security</Text><View style={[s.sectionCard, { backgroundColor: theme.colors.card, borderColor: theme.colors.cardBorder, padding: 14 }]}>
+    <View style={s.mfaRow}><View style={s.mfaLeft}><View style={[s.mfaIcon, { backgroundColor: mfaEnabled ? 'rgba(34, 197, 94, 0.15)' : 'rgba(239, 68, 68, 0.15)' }]}><Shield color={mfaEnabled ? '#22C55E' : '#EF4444'} size={20} /></View><View style={s.flex1}><Text style={[s.mfaTitle, { color: theme.colors.text }]}>Two-Factor Authentication</Text><Text style={[s.mfaSub, { color: theme.colors.textSecondary }]}>{loading ? 'Checking status...' : mfaEnabled ? 'Your account is protected' : 'Add extra security to your account'}</Text></View></View>{loading ? <ActivityIndicator size="small" color={theme.colors.primary} /> : <View style={[s.mfaStatus, { backgroundColor: mfaEnabled ? 'rgba(34, 197, 94, 0.15)' : 'rgba(239, 68, 68, 0.15)' }]}><Text style={[s.mfaStatusText, { color: mfaEnabled ? '#22C55E' : '#EF4444' }]}>{mfaEnabled ? 'ON' : 'OFF'}</Text></View>}</View>
+    <View style={s.mfaInfoRow}><Smartphone color={theme.colors.textMuted} size={14} /><Text style={[s.mfaInfoText, { color: theme.colors.textMuted }]}>Uses authenticator app (Google Authenticator, Authy)</Text></View>
+    <TouchableOpacity onPress={mfaEnabled ? onDisable : onEnable} disabled={loading} style={[s.mfaBtn, { backgroundColor: mfaEnabled ? 'rgba(239, 68, 68, 0.1)' : 'rgba(34, 197, 94, 0.1)', borderColor: mfaEnabled ? 'rgba(239, 68, 68, 0.3)' : 'rgba(34, 197, 94, 0.3)', opacity: loading ? 0.5 : 1 }]}><Key color={mfaEnabled ? '#EF4444' : '#22C55E'} size={16} /><Text style={[s.mfaBtnText, { color: mfaEnabled ? '#EF4444' : '#22C55E' }]}>{mfaEnabled ? 'Disable 2FA' : 'Enable 2FA'}</Text></TouchableOpacity>
+  </View></View>
 );
 
 const ReferralSection = ({ referralCode, inviteCount, totalEarned, usedReferralCode, copied, onCopy, loading, hasUsedReferral, onEnterCode, theme }: any) => (
@@ -319,4 +432,21 @@ const s = StyleSheet.create({
   editCancelText: { fontSize: 14, fontWeight: '600' },
   editSaveBtn: { flex: 1, paddingVertical: 14, borderRadius: 12, alignItems: 'center' },
   editSaveText: { fontSize: 14, fontWeight: '700', color: '#0F172A' },
+  mfaRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
+  mfaLeft: { flexDirection: 'row', alignItems: 'center', flex: 1, gap: 12 },
+  mfaIcon: { width: 40, height: 40, borderRadius: 10, justifyContent: 'center', alignItems: 'center' },
+  mfaTitle: { fontSize: 13, fontWeight: '700' },
+  mfaSub: { fontSize: 10, marginTop: 2 },
+  mfaStatus: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 6 },
+  mfaStatusText: { fontSize: 11, fontWeight: '700' },
+  mfaInfoRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 12, paddingLeft: 4 },
+  mfaInfoText: { fontSize: 10 },
+  mfaBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, borderRadius: 8, padding: 12, borderWidth: 1 },
+  mfaBtnText: { fontSize: 13, fontWeight: '600' },
+  mfaSetupWrap: { alignItems: 'center', paddingVertical: 30 },
+  mfaSetupText: { marginTop: 16, fontSize: 14 },
+  secretBox: { flexDirection: 'row', alignItems: 'center', borderRadius: 10, padding: 12, borderWidth: 1, marginTop: 12, marginBottom: 8 },
+  secretText: { flex: 1, fontSize: 13, fontWeight: '600', fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace', letterSpacing: 1 },
+  copySecretBtn: { padding: 8, borderRadius: 6 },
+  mfaInstructions: { fontSize: 12, lineHeight: 22, marginTop: 16, marginBottom: 16 },
 });
