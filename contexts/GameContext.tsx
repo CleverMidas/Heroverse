@@ -20,7 +20,7 @@ interface GameContextType {
   collectSupercash: () => Promise<number>;
   refreshHeroes: () => Promise<void>;
   calculatePending: () => void;
-  purchaseMysteryBox: () => Promise<{ success: boolean; hero?: HeroWithRarity; error?: string }>;
+  purchaseMysteryBox: (count?: number) => Promise<{ success: boolean; heroes?: HeroWithRarity[]; error?: string }>;
 }
 
 const GameContext = createContext<GameContextType>({
@@ -40,7 +40,7 @@ const GameContext = createContext<GameContextType>({
   collectSupercash: async () => 0,
   refreshHeroes: async () => {},
   calculatePending: () => {},
-  purchaseMysteryBox: async () => ({ success: false }),
+  purchaseMysteryBox: async () => ({ success: false, heroes: [] }),
 });
 
 export function GameProvider({ children }: { children: ReactNode }) {
@@ -205,7 +205,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
 
   const refreshHeroes = async () => { await fetchUserHeroes(); };
 
-  const purchaseMysteryBox = async (): Promise<{ success: boolean; hero?: HeroWithRarity; error?: string }> => {
+  const purchaseMysteryBox = async (count: number = 1): Promise<{ success: boolean; heroes?: HeroWithRarity[]; error?: string }> => {
     if (!user || !profile) return { success: false, error: 'User not found' };
     try {
       setError(null);
@@ -216,13 +216,22 @@ export function GameProvider({ children }: { children: ReactNode }) {
       };
       const weightedHeroes = availableHeroes.map(h => ({ hero: h, weight: getWeight(h.hero_rarities.tier) }));
       const totalWeight = weightedHeroes.reduce((sum, wh) => sum + wh.weight, 0);
-      let random = Math.random() * totalWeight;
-      let selectedHero = weightedHeroes[0].hero;
-      for (const wh of weightedHeroes) { random -= wh.weight; if (random <= 0) { selectedHero = wh.hero; break; } }
-      const { error: insertError } = await supabase.from('user_heroes').insert({ user_id: user.id, hero_id: selectedHero.id, is_active: false, is_revealed: true });
+      const selectRandomHero = (): HeroWithRarity => {
+        let random = Math.random() * totalWeight;
+        for (const wh of weightedHeroes) { random -= wh.weight; if (random <= 0) return wh.hero; }
+        return weightedHeroes[0].hero;
+      };
+      const selectedHeroes: HeroWithRarity[] = [];
+      const inserts = [];
+      for (let i = 0; i < count; i++) {
+        const hero = selectRandomHero();
+        selectedHeroes.push(hero);
+        inserts.push({ user_id: user.id, hero_id: hero.id, is_active: false, is_revealed: true });
+      }
+      const { error: insertError } = await supabase.from('user_heroes').insert(inserts);
       if (insertError) return { success: false, error: insertError.message };
       await fetchUserHeroes();
-      return { success: true, hero: selectedHero };
+      return { success: true, heroes: selectedHeroes };
     } catch { return { success: false, error: 'Failed to purchase mystery box' }; }
   };
 

@@ -8,8 +8,10 @@ import { useGame } from '@/contexts/GameContext';
 import { useTheme } from '@/contexts/ThemeContext';
 import { SkeletonImage } from '@/components/ui';
 import { StackedHero, HeroWithRarity } from '@/types/database';
-import { Zap, Coins, Gift, X, Sparkles, Check, Layers, Flame } from 'lucide-react-native';
+import { Zap, Coins, Gift, X, Sparkles, Check, Layers, Flame, Star, Crown } from 'lucide-react-native';
 import { getHeroImageSource } from '@/lib/heroImages';
+
+type MysteryPackage = { id: 'single' | 'triple' | 'mega'; count: number; price: string; label: string; bonus?: string; icon: any; colors: [string, string]; popular?: boolean };
 
 const { width, height } = Dimensions.get('window');
 const BG = require('@/assets/home_bg.jpg');
@@ -30,7 +32,15 @@ export default function HeroesScreen() {
   const [filter, setFilter] = useState<Filter>('all');
   const [showMystery, setShowMystery] = useState(false);
   const [purchasing, setPurchasing] = useState(false);
-  const [revealed, setRevealed] = useState<HeroWithRarity | null>(null);
+  const [revealedHeroes, setRevealedHeroes] = useState<HeroWithRarity[]>([]);
+  const [selectedPackage, setSelectedPackage] = useState<MysteryPackage['id']>('single');
+  const [revealIndex, setRevealIndex] = useState(0);
+
+  const packages: MysteryPackage[] = [
+    { id: 'single', count: 1, price: '$7.99', label: '1x Hero', icon: Gift, colors: ['#3B82F6', '#1D4ED8'] },
+    { id: 'triple', count: 3, price: '$19.99', label: '3x Heroes', bonus: 'Save 17%', icon: Star, colors: ['#8B5CF6', '#6D28D9'], popular: true },
+    { id: 'mega', count: 10, price: '$49.99', label: '10x Heroes', bonus: 'Best Value!', icon: Crown, colors: ['#F59E0B', '#D97706'] },
+  ];
 
   useEffect(() => { if (openMystery === 'true') setShowMystery(true); }, [openMystery]);
 
@@ -45,8 +55,17 @@ export default function HeroesScreen() {
   const onClaim = async () => { setClaiming(true); if (await claimFreeHero()) setShowClaim(true); setClaiming(false); };
   const onActivate = async (id: string) => { setActivating(id); await activateAllCopies(id); setActivating(null); setSelected(null); };
   const onDeactivate = async (id: string) => { setDeactivating(id); await deactivateAllCopies(id); setDeactivating(null); setSelected(null); };
-  const onPurchase = async () => { setPurchasing(true); const r = await purchaseMysteryBox(); setPurchasing(false); if (r.success && r.hero) setRevealed(r.hero); };
-  const closeMystery = () => { setShowMystery(false); setRevealed(null); };
+  const onPurchase = async (pkg: MysteryPackage) => {
+    setPurchasing(true);
+    const r = await purchaseMysteryBox(pkg.count);
+    setPurchasing(false);
+    if (r.success && r.heroes && r.heroes.length > 0) {
+      setRevealedHeroes(r.heroes);
+      setRevealIndex(0);
+    }
+  };
+  const closeMystery = () => { setShowMystery(false); setRevealedHeroes([]); setRevealIndex(0); };
+  const nextReveal = () => { if (revealIndex < revealedHeroes.length - 1) setRevealIndex(revealIndex + 1); else closeMystery(); };
 
   if (loading) return (
     <ImageBackground source={BG} style={s.bg} resizeMode="cover"><View style={[s.overlay, { backgroundColor: isDark ? 'rgba(10,15,30,0.85)' : 'rgba(248,250,252,0.70)' }]}><SafeAreaView style={s.loadCenter}><ActivityIndicator size="large" color={theme.colors.primary} /><Text style={[s.loadText, { color: theme.colors.textSecondary }]}>Loading heroes...</Text></SafeAreaView></View></ImageBackground>
@@ -77,14 +96,14 @@ export default function HeroesScreen() {
             <View style={s.grid}>
               <TouchableOpacity style={[s.mysteryCard, { borderColor: theme.colors.primary }]} onPress={() => setShowMystery(true)} activeOpacity={0.85}>
                 <Image source={DICE} style={s.mysteryImg} resizeMode="cover" /><LinearGradient colors={['transparent', 'rgba(0,0,0,0.8)']} locations={[0.3, 1]} style={StyleSheet.absoluteFillObject} />
-                <View style={s.mysteryContent}><View style={[s.priceTag, { backgroundColor: theme.colors.primary }]}><Text style={s.priceText}>$4.99</Text></View><View style={s.flex1} /><View><Text style={s.mysteryTitle}>Mystery Box</Text><View style={s.tapTag}><Text style={[s.tapText, { color: theme.colors.primary }]}>TAP TO OPEN</Text></View></View></View>
+                <View style={s.mysteryContent}><View style={[s.priceTag, { backgroundColor: theme.colors.primary }]}><Text style={s.priceText}>From $7.99</Text></View><View style={s.flex1} /><View><Text style={s.mysteryTitle}>Mystery Box</Text><View style={s.tapTag}><Text style={[s.tapText, { color: theme.colors.primary }]}>TAP TO OPEN</Text></View></View></View>
               </TouchableOpacity>
               {filtered.map(st => <HeroGridCard key={st.hero_id} stack={st} theme={theme} onPress={() => setSelected(st)} />)}
             </View>
             <View style={s.spacer} />
           </ScrollView>
           <HeroModal stack={selected} theme={theme} onClose={() => setSelected(null)} activating={activating} deactivating={deactivating} onActivate={onActivate} onDeactivate={onDeactivate} />
-          <MysteryModal visible={showMystery} theme={theme} revealed={revealed} purchasing={purchasing} onPurchase={onPurchase} onClose={closeMystery} />
+          <MysteryModal visible={showMystery} theme={theme} revealedHeroes={revealedHeroes} revealIndex={revealIndex} purchasing={purchasing} packages={packages} selectedPackage={selectedPackage} setSelectedPackage={setSelectedPackage} onPurchase={onPurchase} onNext={nextReveal} onClose={closeMystery} />
           <ClaimModal visible={showClaim} theme={theme} hero={starter} onClose={() => setShowClaim(false)} />
         </SafeAreaView>
       </View>
@@ -126,14 +145,49 @@ const ModalStat = ({ icon: Icon, color, value, label, theme }: any) => (
   <View style={s.mStat}><Icon color={color} size={20} /><Text style={[s.mStatVal, { color: theme.colors.text }]}>{value}</Text><Text style={[s.mStatLbl, { color: theme.colors.textSecondary }]}>{label}</Text></View>
 );
 
-const MysteryModal = ({ visible, theme, revealed, purchasing, onPurchase, onClose }: any) => (
-  <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}><View style={[s.modalBg, { backgroundColor: theme.colors.overlay }]}><View style={[s.mysteryModal, { backgroundColor: theme.colors.modalBackground, borderColor: `${theme.colors.primary}66` }]}>
-    <TouchableOpacity style={s.closeBtn} onPress={onClose}><X color={theme.colors.textSecondary} size={24} /></TouchableOpacity>
-    {revealed ? (<><View style={s.revealIcon}><Sparkles color={theme.colors.primary} size={48} /></View><Text style={[s.revealTitle, { color: theme.colors.text }]}>Hero Obtained!</Text><SkeletonImage source={getHeroImageSource(revealed.image_url)} style={s.revealImg} /><Text style={[s.revealName, { color: theme.colors.text }]}>{revealed.name}</Text><View style={[s.revealTag, { backgroundColor: revealed.hero_rarities.color_hex + '20' }]}><Text style={[s.revealRarity, { color: revealed.hero_rarities.color_hex }]}>{revealed.hero_rarities.name}</Text></View><View style={s.revealSc}><Coins color={theme.colors.primary} size={16} /><Text style={[s.revealScText, { color: theme.colors.primary }]}>{revealed.hero_rarities.supercash_per_hour} SC/hr</Text></View><TouchableOpacity style={[s.awesomeBtn, { backgroundColor: theme.colors.primary }]} onPress={onClose}><Text style={s.awesomeText}>Awesome!</Text></TouchableOpacity></>) : (
-      <><Image source={DICE} style={s.diceImg} resizeMode="contain" /><Text style={[s.mysteryTitleModal, { color: theme.colors.text }]}>Mystery Box</Text><Text style={[s.mysteryDesc, { color: theme.colors.textSecondary }]}>Get a random hero! Duplicates stack and multiply your SC earnings!</Text><View style={s.priceRow}><Text style={[s.priceNum, { color: theme.colors.primary }]}>$4.99</Text><Text style={[s.priceUnit, { color: theme.colors.textSecondary }]}>USD</Text></View><TouchableOpacity style={s.openBtn} onPress={onPurchase} disabled={purchasing}><LinearGradient colors={theme.gradients.primary} style={s.openGrad}>{purchasing ? <ActivityIndicator color="#0F172A" /> : <><Gift color="#0F172A" size={20} /><Text style={s.openText}>OPEN MYSTERY BOX</Text></>}</LinearGradient></TouchableOpacity></>
-    )}
-  </View></View></Modal>
-);
+const MysteryModal = ({ visible, theme, revealedHeroes, revealIndex, purchasing, packages, selectedPackage, setSelectedPackage, onPurchase, onNext, onClose }: any) => {
+  const currentHero = revealedHeroes[revealIndex];
+  const isRevealing = revealedHeroes.length > 0;
+  const remaining = revealedHeroes.length - revealIndex - 1;
+  return (
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}><View style={[s.modalBg, { backgroundColor: theme.colors.overlay }]}><View style={[s.mysteryModal, { backgroundColor: theme.colors.modalBackground, borderColor: `${theme.colors.primary}66` }]}>
+      <TouchableOpacity style={s.closeBtn} onPress={onClose}><X color={theme.colors.textSecondary} size={24} /></TouchableOpacity>
+      {isRevealing && currentHero ? (
+        <><View style={s.revealIcon}><Sparkles color={currentHero.hero_rarities.color_hex} size={48} /></View>
+          <Text style={[s.revealTitle, { color: theme.colors.text }]}>Hero Obtained!</Text>
+          {revealedHeroes.length > 1 && <View style={[s.revealCounter, { backgroundColor: theme.colors.primary }]}><Text style={s.revealCounterText}>{revealIndex + 1} / {revealedHeroes.length}</Text></View>}
+          <SkeletonImage source={getHeroImageSource(currentHero.image_url)} style={s.revealImg} />
+          <Text style={[s.revealName, { color: theme.colors.text }]}>{currentHero.name}</Text>
+          <View style={[s.revealTag, { backgroundColor: currentHero.hero_rarities.color_hex + '20' }]}><Text style={[s.revealRarity, { color: currentHero.hero_rarities.color_hex }]}>{currentHero.hero_rarities.name}</Text></View>
+          <View style={s.revealSc}><Coins color={theme.colors.primary} size={16} /><Text style={[s.revealScText, { color: theme.colors.primary }]}>{currentHero.hero_rarities.supercash_per_hour} SC/hr</Text></View>
+          <TouchableOpacity style={[s.awesomeBtn, { backgroundColor: theme.colors.primary }]} onPress={onNext}><Text style={s.awesomeText}>{remaining > 0 ? `Next (${remaining} more)` : 'Awesome!'}</Text></TouchableOpacity>
+        </>
+      ) : (
+        <><Image source={DICE} style={s.diceImg} resizeMode="contain" />
+          <Text style={[s.mysteryTitleModal, { color: theme.colors.text }]}>Mystery Box</Text>
+          <Text style={[s.mysteryDesc, { color: theme.colors.textSecondary }]}>Get random heroes! Duplicates stack and multiply your SC earnings!</Text>
+          <View style={s.packagesContainer}>
+            {packages.map((pkg: MysteryPackage) => (
+              <TouchableOpacity key={pkg.id} style={[s.packageCard, selectedPackage === pkg.id && s.packageCardSelected, { backgroundColor: selectedPackage === pkg.id ? `${pkg.colors[0]}15` : theme.colors.surfaceSecondary, borderColor: selectedPackage === pkg.id ? pkg.colors[0] : theme.colors.cardBorder }]} onPress={() => setSelectedPackage(pkg.id)} activeOpacity={0.8}>
+                {pkg.popular && <View style={[s.popularBadge, { backgroundColor: pkg.colors[0] }]}><Text style={s.popularText}>POPULAR</Text></View>}
+                {pkg.bonus && <View style={[s.bonusBadge, { backgroundColor: `${pkg.colors[0]}20` }]}><Text style={[s.bonusText, { color: pkg.colors[0] }]}>{pkg.bonus}</Text></View>}
+                <LinearGradient colors={pkg.colors} style={s.packageIcon}><pkg.icon color="#FFF" size={20} /></LinearGradient>
+                <Text style={[s.packageLabel, { color: theme.colors.text }]}>{pkg.label}</Text>
+                <Text style={[s.packagePrice, { color: pkg.colors[0] }]}>{pkg.price}</Text>
+                {selectedPackage === pkg.id && <View style={[s.selectedCheck, { backgroundColor: pkg.colors[0] }]}><Check color="#FFF" size={12} /></View>}
+              </TouchableOpacity>
+            ))}
+          </View>
+          <TouchableOpacity style={s.openBtn} onPress={() => onPurchase(packages.find((p: MysteryPackage) => p.id === selectedPackage))} disabled={purchasing}>
+            <LinearGradient colors={packages.find((p: MysteryPackage) => p.id === selectedPackage)?.colors || theme.gradients.primary} style={s.openGrad}>
+              {purchasing ? <ActivityIndicator color="#FFF" /> : <><Gift color="#FFF" size={20} /><Text style={s.openText}>OPEN {packages.find((p: MysteryPackage) => p.id === selectedPackage)?.label.toUpperCase()}</Text></>}
+            </LinearGradient>
+          </TouchableOpacity>
+        </>
+      )}
+    </View></View></Modal>
+  );
+};
 
 const ClaimModal = ({ visible, theme, hero, onClose }: any) => (
   <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}><View style={[s.modalBg, { backgroundColor: theme.colors.overlay }]}><View style={[s.claimModal, { backgroundColor: theme.colors.modalBackground, borderColor: theme.colors.cardBorder }]}><View style={s.claimModalIcon}><Sparkles color={theme.colors.primary} size={48} /></View><Text style={[s.claimModalTitle, { color: theme.colors.text }]}>Hero Claimed!</Text><Text style={[s.claimModalSub, { color: theme.colors.textSecondary }]}>You received {hero?.name}! Tap Activate to start earning SuperCash.</Text><TouchableOpacity style={[s.awesomeBtn, { backgroundColor: theme.colors.primary }]} onPress={onClose}><Text style={s.awesomeText}>Awesome!</Text></TouchableOpacity></View></View></Modal>
@@ -206,7 +260,7 @@ const s = StyleSheet.create({
   actBtn: { width: '100%', borderRadius: 10, overflow: 'hidden' },
   actGrad: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 14 },
   actText: { fontSize: 14, fontWeight: '700', color: '#0F172A' },
-  mysteryModal: { borderRadius: 20, padding: 24, width: '100%', maxWidth: 320, alignItems: 'center', borderWidth: 2 },
+  mysteryModal: { borderRadius: 20, padding: 20, width: '100%', maxWidth: 360, alignItems: 'center', borderWidth: 2 },
   diceImg: { width: 140, height: 120, marginBottom: 16 },
   mysteryTitleModal: { fontSize: 24, fontWeight: '800', marginBottom: 8 },
   mysteryDesc: { fontSize: 13, textAlign: 'center', lineHeight: 20, marginBottom: 20 },
@@ -215,7 +269,7 @@ const s = StyleSheet.create({
   priceUnit: { fontSize: 14, fontWeight: '600' },
   openBtn: { width: '100%', borderRadius: 12, overflow: 'hidden' },
   openGrad: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, paddingVertical: 16 },
-  openText: { fontSize: 15, fontWeight: '800', color: '#0F172A' },
+  openText: { fontSize: 15, fontWeight: '800', color: '#FFF' },
   revealIcon: { width: 80, height: 80, borderRadius: 40, backgroundColor: 'rgba(251,191,36,0.15)', justifyContent: 'center', alignItems: 'center', marginBottom: 16 },
   revealTitle: { fontSize: 24, fontWeight: '800', marginBottom: 16 },
   revealImg: { width: 120, height: 120, borderRadius: 16, marginBottom: 12 },
@@ -226,6 +280,19 @@ const s = StyleSheet.create({
   revealScText: { fontSize: 16, fontWeight: '700' },
   awesomeBtn: { paddingHorizontal: 32, paddingVertical: 14, borderRadius: 12 },
   awesomeText: { fontSize: 16, fontWeight: '700', color: '#0F172A' },
+  revealCounter: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, marginBottom: 12 },
+  revealCounterText: { fontSize: 12, fontWeight: '700', color: '#0F172A' },
+  packagesContainer: { flexDirection: 'row', gap: 10, marginBottom: 20, width: '100%' },
+  packageCard: { flex: 1, borderRadius: 14, padding: 12, alignItems: 'center', borderWidth: 2, position: 'relative' },
+  packageCardSelected: { borderWidth: 2 },
+  popularBadge: { position: 'absolute', top: -10, left: '50%', marginLeft: -32, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8, zIndex: 10 },
+  popularText: { fontSize: 8, fontWeight: '800', color: '#FFF' },
+  bonusBadge: { marginBottom: 6, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 },
+  bonusText: { fontSize: 9, fontWeight: '700' },
+  packageIcon: { width: 40, height: 40, borderRadius: 12, justifyContent: 'center', alignItems: 'center', marginBottom: 8 },
+  packageLabel: { fontSize: 13, fontWeight: '700', marginBottom: 4 },
+  packagePrice: { fontSize: 16, fontWeight: '800' },
+  selectedCheck: { position: 'absolute', top: 6, right: 6, width: 20, height: 20, borderRadius: 10, justifyContent: 'center', alignItems: 'center' },
   claimModal: { borderRadius: 20, padding: 28, alignItems: 'center', maxWidth: 300, borderWidth: 1 },
   claimModalIcon: { width: 72, height: 72, borderRadius: 36, backgroundColor: 'rgba(251,191,36,0.15)', justifyContent: 'center', alignItems: 'center', marginBottom: 16 },
   claimModalTitle: { fontSize: 20, fontWeight: '800', marginBottom: 10 },
