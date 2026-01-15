@@ -96,7 +96,7 @@ export default function HeroesScreen() {
             <View style={s.grid}>
               <TouchableOpacity style={[s.mysteryCard, { borderColor: theme.colors.primary }]} onPress={() => setShowMystery(true)} activeOpacity={0.85}>
                 <Image source={DICE} style={s.mysteryImg} resizeMode="cover" /><LinearGradient colors={['transparent', 'rgba(0,0,0,0.8)']} locations={[0.3, 1]} style={StyleSheet.absoluteFillObject} />
-                <View style={s.mysteryContent}><View style={[s.priceTag, { backgroundColor: theme.colors.primary }]}><Text style={s.priceText}>From $7.99</Text></View><View style={s.flex1} /><View><Text style={s.mysteryTitle}>Mystery Box</Text><View style={s.tapTag}><Text style={[s.tapText, { color: theme.colors.primary }]}>TAP TO OPEN</Text></View></View></View>
+                <View style={s.mysteryContent}><View style={[s.priceTag, { backgroundColor: theme.colors.primary }]}><Text style={s.priceText}>$7.99</Text></View><View style={s.flex1} /><View><Text style={s.mysteryTitle}>Mystery Box</Text><View style={s.tapTag}><Text style={[s.tapText, { color: theme.colors.primary }]}>TAP TO OPEN</Text></View></View></View>
               </TouchableOpacity>
               {filtered.map(st => <HeroGridCard key={st.hero_id} stack={st} theme={theme} onPress={() => setSelected(st)} />)}
             </View>
