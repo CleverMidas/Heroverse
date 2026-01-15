@@ -37,7 +37,7 @@ export default function HeroesScreen() {
   const [revealIndex, setRevealIndex] = useState(0);
 
   const packages: MysteryPackage[] = [
-    { id: 'single', count: 1, price: '$7.99', label: '1x Hero', icon: Gift, colors: ['#3B82F6', '#1D4ED8'] },
+    { id: 'single', count: 1, price: '$7.99', label: '1x Hero', bonus: 'Cheaper!', icon: Gift, colors: ['#3B82F6', '#1D4ED8'] },
     { id: 'triple', count: 3, price: '$19.99', label: '3x Heroes', bonus: 'Save 17%', icon: Star, colors: ['#8B5CF6', '#6D28D9'], popular: true },
     { id: 'mega', count: 10, price: '$49.99', label: '10x Heroes', bonus: 'Best Value!', icon: Crown, colors: ['#F59E0B', '#D97706'] },
   ];
