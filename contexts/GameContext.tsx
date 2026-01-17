@@ -53,6 +53,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
   const [error, setError] = useState<string | null>(null);
 
   const stackedHeroes = useMemo((): StackedHero[] => {
+    const now = new Date();
     const heroMap = new Map<string, UserHeroWithDetails[]>();
     userHeroes.forEach(uh => {
       const existing = heroMap.get(uh.hero_id) || [];
@@ -62,11 +63,71 @@ export function GameProvider({ children }: { children: ReactNode }) {
     const stacked: StackedHero[] = [];
     heroMap.forEach((instances, heroId) => {
       const hero = instances[0].heroes;
-      const activeCount = instances.filter(i => i.is_active).length;
+      const activeInstances = instances.filter(i => i.is_active);
+      const activeCount = activeInstances.length;
       const isAnyActive = activeCount > 0;
       const isAnyRevealed = instances.some(i => i.is_revealed);
       const primaryInstance = instances.find(i => i.is_revealed && i.is_active) || instances.find(i => i.is_revealed) || instances[0];
-      stacked.push({ hero_id: heroId, hero, count: instances.length, instances, activeCount, totalEarningRate: activeCount * hero.hero_rarities.supercash_per_hour, isAnyActive, isAnyRevealed, primaryInstance });
+      
+      // Calculate current power levels (accounting for hourly decrease)
+      let activeWithPowerCount = 0;
+      let totalPowerSum = 0;
+      let activePowerSum = 0;
+      
+      // Helper function to calculate current power for any instance
+      const calculateCurrentPower = (instance: UserHeroWithDetails): number => {
+        const basePower = instance.power_level ?? 100;
+        
+        // If inactive, return base power (no decrease)
+        if (!instance.is_active) {
+          return basePower;
+        }
+        
+        // If active, calculate power decrease
+        const lastPowerUpdate = instance.last_power_update 
+          ? new Date(instance.last_power_update) 
+          : (instance.activated_at ? new Date(instance.activated_at) : now);
+        
+        const hoursElapsed = (now.getTime() - lastPowerUpdate.getTime()) / (1000 * 60 * 60);
+        const powerDecrease = Math.floor(hoursElapsed);
+        const currentPower = Math.max(0, basePower - powerDecrease);
+        
+        return currentPower;
+      };
+      
+      instances.forEach(instance => {
+        const currentPower = calculateCurrentPower(instance);
+        
+        // Add to total power (all instances)
+        totalPowerSum += currentPower;
+        
+        // Add to active power (only active instances)
+        if (instance.is_active) {
+          activePowerSum += currentPower;
+          
+          // Count only active instances with power > 0 for earning calculation
+          if (currentPower > 0) {
+            activeWithPowerCount++;
+          }
+        }
+      });
+      
+      // Only count heroes with power > 0 for earning rate
+      const totalEarningRate = activeWithPowerCount * hero.hero_rarities.supercash_per_hour;
+      
+      stacked.push({ 
+        hero_id: heroId, 
+        hero, 
+        count: instances.length, 
+        instances, 
+        activeCount, 
+        totalEarningRate,
+        isAnyActive, 
+        isAnyRevealed, 
+        primaryInstance,
+        totalPower: totalPowerSum,
+        activePower: activePowerSum
+      });
     });
     return stacked.sort((a, b) => new Date(b.primaryInstance.acquired_at).getTime() - new Date(a.primaryInstance.acquired_at).getTime());
   }, [userHeroes]);
@@ -91,10 +152,19 @@ export function GameProvider({ children }: { children: ReactNode }) {
     let total = 0;
     const now = new Date();
     userHeroes.forEach(uh => {
-      if (uh.is_active) {
-        const lastCollected = uh.last_collected_at ? new Date(uh.last_collected_at) : new Date(uh.activated_at!);
-        const hoursElapsed = (now.getTime() - lastCollected.getTime()) / (1000 * 60 * 60);
-        total += Math.floor(hoursElapsed * uh.heroes.hero_rarities.supercash_per_hour);
+      if (uh.is_active && uh.power_level > 0) {
+        // Calculate current power level (accounting for hourly decrease)
+        const lastPowerUpdate = uh.last_power_update ? new Date(uh.last_power_update) : (uh.activated_at ? new Date(uh.activated_at) : now);
+        const hoursElapsedForPower = (now.getTime() - lastPowerUpdate.getTime()) / (1000 * 60 * 60);
+        const powerDecrease = Math.floor(hoursElapsedForPower);
+        const currentPower = Math.max(0, (uh.power_level || 100) - powerDecrease);
+        
+        // Only calculate earnings if hero still has power
+        if (currentPower > 0) {
+          const lastCollected = uh.last_collected_at ? new Date(uh.last_collected_at) : new Date(uh.activated_at!);
+          const hoursElapsed = (now.getTime() - lastCollected.getTime()) / (1000 * 60 * 60);
+          total += Math.floor(hoursElapsed * uh.heroes.hero_rarities.supercash_per_hour);
+        }
       }
     });
     setPendingSupercash(total);
@@ -111,11 +181,22 @@ export function GameProvider({ children }: { children: ReactNode }) {
     init();
   }, [user]);
 
+  // Update pending SuperCash and refresh heroes periodically to update power levels
   useEffect(() => {
     calculatePending();
-    const interval = setInterval(calculatePending, 1000);
-    return () => clearInterval(interval);
-  }, [calculatePending]);
+    // Refresh heroes every minute to get updated power levels from database
+    const pendingInterval = setInterval(calculatePending, 1000);
+    const refreshInterval = setInterval(() => {
+      if (user) {
+        fetchUserHeroes();
+      }
+    }, 60000); // Refresh every minute
+    
+    return () => {
+      clearInterval(pendingInterval);
+      clearInterval(refreshInterval);
+    };
+  }, [calculatePending, user]);
 
   const claimFreeHero = async (): Promise<boolean> => {
     if (!user || profile?.has_claimed_free_hero) return false;
@@ -123,7 +204,13 @@ export function GameProvider({ children }: { children: ReactNode }) {
       setError(null);
       const starterHero = allHeroes.find(h => h.is_starter);
       if (!starterHero) { setError('No starter hero available'); return false; }
-      const { error: insertError } = await supabase.from('user_heroes').insert({ user_id: user.id, hero_id: starterHero.id, is_active: false, is_revealed: true });
+      const { error: insertError } = await supabase.from('user_heroes').insert({ 
+        user_id: user.id, 
+        hero_id: starterHero.id, 
+        is_active: false, 
+        is_revealed: true,
+        power_level: 100 
+      });
       if (insertError) { setError(insertError.message); return false; }
       const { error: updateError } = await supabase.from('profiles').update({ has_claimed_free_hero: true }).eq('id', user.id);
       if (updateError) { setError(updateError.message); return false; }
@@ -138,7 +225,12 @@ export function GameProvider({ children }: { children: ReactNode }) {
     try {
       setError(null);
       const now = new Date().toISOString();
-      const { error: updateError } = await supabase.from('user_heroes').update({ is_active: true, activated_at: now, last_collected_at: now }).eq('id', userHeroId).eq('user_id', user.id);
+      const { error: updateError } = await supabase.from('user_heroes').update({ 
+        is_active: true, 
+        activated_at: now, 
+        last_collected_at: now,
+        last_power_update: now 
+      }).eq('id', userHeroId).eq('user_id', user.id);
       if (updateError) { setError(updateError.message); return false; }
       await fetchUserHeroes();
       return true;
@@ -161,7 +253,12 @@ export function GameProvider({ children }: { children: ReactNode }) {
     try {
       setError(null);
       const now = new Date().toISOString();
-      const { error: updateError } = await supabase.from('user_heroes').update({ is_active: true, activated_at: now, last_collected_at: now }).eq('hero_id', heroId).eq('user_id', user.id);
+      const { error: updateError } = await supabase.from('user_heroes').update({ 
+        is_active: true, 
+        activated_at: now, 
+        last_collected_at: now,
+        last_power_update: now 
+      }).eq('hero_id', heroId).eq('user_id', user.id);
       if (updateError) { setError(updateError.message); return false; }
       await fetchUserHeroes();
       return true;
@@ -226,7 +323,13 @@ export function GameProvider({ children }: { children: ReactNode }) {
       for (let i = 0; i < count; i++) {
         const hero = selectRandomHero();
         selectedHeroes.push(hero);
-        inserts.push({ user_id: user.id, hero_id: hero.id, is_active: false, is_revealed: true });
+        inserts.push({ 
+          user_id: user.id, 
+          hero_id: hero.id, 
+          is_active: false, 
+          is_revealed: true,
+          power_level: 100 
+        });
       }
       const { error: insertError } = await supabase.from('user_heroes').insert(inserts);
       if (insertError) return { success: false, error: insertError.message };

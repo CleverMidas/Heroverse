@@ -44,11 +44,31 @@ export default function HeroesScreen() {
 
   useEffect(() => { if (openMystery === 'true') setShowMystery(true); }, [openMystery]);
 
+  // Add real-time updates for power calculation
+  const [powerRefresh, setPowerRefresh] = useState(0);
+  useEffect(() => {
+    const interval = setInterval(() => setPowerRefresh(p => p + 1), 60000); // Update every minute
+    return () => clearInterval(interval);
+  }, []);
+
   const starter = allHeroes.find(h => h.is_starter);
   const canClaim = !profile?.has_claimed_free_hero && starter;
   const total = stackedHeroes.reduce((s, h) => s + h.count, 0);
   const active = stackedHeroes.reduce((s, h) => s + h.activeCount, 0);
-  const power = stackedHeroes.reduce((s, h) => s + h.totalEarningRate * 10, 0);
+  
+  // Calculate total power using current calculated values (accounting for real-time decrease)
+  // This recalculates from instances to get most up-to-date values
+  const calculateTotalPower = () => {
+    let total = 0;
+    stackedHeroes.forEach(stack => {
+      stack.instances.forEach(inst => {
+        total += calculateCurrentPower(inst);
+      });
+    });
+    return total;
+  };
+  
+  const power = calculateTotalPower();
   const earning = stackedHeroes.reduce((s, h) => s + h.totalEarningRate, 0);
   const filtered = stackedHeroes.filter(st => filter === 'all' ? true : filter === 'active' ? st.isAnyActive : !st.isAnyActive);
 
@@ -115,31 +135,135 @@ const StatBox = ({ icon: Icon, color, value, label, theme }: any) => (
   <View style={[s.statBox, { backgroundColor: theme.colors.card, borderColor: color }]}><View style={[s.statIcon, { backgroundColor: `${color}20` }]}><Icon color={color} size={16} /></View><Text style={[s.statVal, { color: theme.colors.text }]}>{value}</Text><Text style={[s.statLbl, { color: theme.colors.textSecondary }]}>{label}</Text></View>
 );
 
-const HeroGridCard = ({ stack, theme, onPress }: any) => (
-  <TouchableOpacity style={[s.heroCard, { backgroundColor: theme.colors.card, borderColor: stack.isAnyRevealed ? (stack.isAnyActive ? stack.hero.hero_rarities.color_hex : theme.colors.cardBorder) : theme.colors.primary }]} onPress={onPress} activeOpacity={0.85}>
-    <SkeletonImage source={getHeroImageSource(stack.hero.image_url)} style={s.heroImg} /><LinearGradient colors={theme.gradients.hero} locations={[0.1, 1]} style={StyleSheet.absoluteFillObject} />
-    {stack.count > 1 && <View style={[s.countBadge, { backgroundColor: theme.colors.primary }]}><Text style={s.countText}>{stack.count}X</Text></View>}
-    {stack.isAnyActive && stack.isAnyRevealed && <View style={[s.activeBadge, { backgroundColor: theme.colors.success }]}><Sparkles color="#FFF" size={10} /><Text style={s.activeText}>ACTIVE</Text></View>}
-    <View style={s.heroInfo}><Text style={s.heroName} numberOfLines={1}>{stack.isAnyRevealed ? stack.hero.name : '???'}</Text><View style={s.heroMeta}><View style={[s.rarityTag, { backgroundColor: stack.isAnyRevealed ? stack.hero.hero_rarities.color_hex + '25' : 'rgba(251,191,36,0.2)' }]}><Text style={[s.rarityText, { color: stack.isAnyRevealed ? stack.hero.hero_rarities.color_hex : theme.colors.primary }]}>{stack.isAnyRevealed ? stack.hero.hero_rarities.name : '???'}</Text></View><View style={s.scTag}><Coins color={theme.colors.primary} size={14} /><Text style={[s.scText, { color: theme.colors.primary }]}>{stack.isAnyRevealed ? `${stack.hero.hero_rarities.supercash_per_hour}/hr` : '???'}</Text></View></View></View>
-  </TouchableOpacity>
-);
+const calculateCurrentPower = (instance: any): number => {
+  if (!instance.is_active || (instance.power_level || 100) === 0) return instance.power_level || 100;
+  const now = new Date();
+  const lastPowerUpdate = instance.last_power_update ? new Date(instance.last_power_update) : (instance.activated_at ? new Date(instance.activated_at) : now);
+  const hoursElapsed = (now.getTime() - lastPowerUpdate.getTime()) / (1000 * 60 * 60);
+  const powerDecrease = Math.floor(hoursElapsed);
+  return Math.max(0, (instance.power_level || 100) - powerDecrease);
+};
 
-const HeroModal = ({ stack, theme, onClose, activating, deactivating, onActivate, onDeactivate }: any) => (
-  <Modal visible={!!stack} transparent animationType="fade" onRequestClose={onClose}>{stack && (
-    <View style={[s.modalBg, { backgroundColor: theme.colors.overlay }]}><View style={[s.modalCard, { backgroundColor: theme.colors.modalBackground, borderColor: theme.colors.cardBorder }]}>
-      <TouchableOpacity style={s.closeBtn} onPress={onClose}><X color={theme.colors.textSecondary} size={24} /></TouchableOpacity>
-      {stack.count > 1 && <View style={[s.ownedBadge, { backgroundColor: theme.colors.primary }]}><Text style={s.ownedText}>{stack.count}X OWNED</Text></View>}
-      <SkeletonImage source={getHeroImageSource(stack.hero.image_url)} style={s.modalImg} />
-      <Text style={[s.modalName, { color: theme.colors.text }]}>{stack.hero.name}</Text>
-      <View style={[s.tierTag, { backgroundColor: stack.hero.hero_rarities.color_hex + '20' }]}><Text style={[s.tierText, { color: stack.hero.hero_rarities.color_hex }]}>{stack.hero.hero_rarities.name} (Tier {stack.hero.hero_rarities.tier})</Text></View>
-      <Text style={[s.desc, { color: theme.colors.textSecondary }]}>{stack.hero.hero_rarities.description}</Text>
-      <View style={s.modalStats}><ModalStat icon={Coins} color={theme.colors.primary} value={stack.count > 1 ? `${stack.count}×${stack.hero.hero_rarities.supercash_per_hour}` : stack.hero.hero_rarities.supercash_per_hour} label="SC/hr" theme={theme} /><ModalStat icon={Flame} color={theme.colors.purple} value={stack.count * stack.hero.hero_rarities.supercash_per_hour * 10} label="Power" theme={theme} /><ModalStat icon={Layers} color={theme.colors.info} value={`${stack.activeCount}/${stack.count}`} label="Active" theme={theme} /></View>
-      {stack.isAnyActive ? (<><View style={[s.activeRow, { backgroundColor: theme.colors.successLight }]}><Check color={theme.colors.success} size={20} /><Text style={[s.activeInfo, { color: theme.colors.success }]}>{stack.activeCount} of {stack.count} Active & Earning</Text></View><TouchableOpacity style={[s.deactBtn, { backgroundColor: theme.colors.errorLight, borderColor: `${theme.colors.error}50` }]} onPress={() => onDeactivate(stack.hero_id)} disabled={deactivating === stack.hero_id}>{deactivating === stack.hero_id ? <ActivityIndicator color={theme.colors.error} size="small" /> : <><Zap color={theme.colors.error} size={16} /><Text style={[s.deactText, { color: theme.colors.error }]}>Deactivate All</Text></>}</TouchableOpacity></>) : (
-        <TouchableOpacity style={s.actBtn} onPress={() => onActivate(stack.hero_id)} disabled={activating === stack.hero_id}><LinearGradient colors={theme.gradients.primary} style={s.actGrad}>{activating === stack.hero_id ? <ActivityIndicator color="#0F172A" /> : <><Zap color="#0F172A" size={20} /><Text style={s.actText}>ACTIVATE ALL ({stack.count})</Text></>}</LinearGradient></TouchableOpacity>
-      )}
-    </View></View>
-  )}</Modal>
-);
+const HeroGridCard = ({ stack, theme, onPress }: any) => {
+  const avgPower = stack.instances.reduce((sum: number, inst: any) => sum + calculateCurrentPower(inst), 0) / stack.count;
+  const hasActiveWithPower = stack.instances.some((inst: any) => inst.is_active && calculateCurrentPower(inst) > 0);
+  const isDepleted = stack.isAnyActive && !hasActiveWithPower;
+  
+  return (
+    <TouchableOpacity style={[s.heroCard, { backgroundColor: theme.colors.card, borderColor: stack.isAnyRevealed ? (isDepleted ? '#EF4444' : stack.isAnyActive ? stack.hero.hero_rarities.color_hex : theme.colors.cardBorder) : theme.colors.primary }]} onPress={onPress} activeOpacity={0.85}>
+      <SkeletonImage source={getHeroImageSource(stack.hero.image_url)} style={s.heroImg} /><LinearGradient colors={theme.gradients.hero} locations={[0.1, 1]} style={StyleSheet.absoluteFillObject} />
+      {stack.count > 1 && <View style={[s.countBadge, { backgroundColor: theme.colors.primary }]}><Text style={s.countText}>{stack.count}X</Text></View>}
+      {stack.isAnyActive && stack.isAnyRevealed && !isDepleted && <View style={[s.activeBadge, { backgroundColor: theme.colors.success }]}><Sparkles color="#FFF" size={10} /><Text style={s.activeText}>ACTIVE</Text></View>}
+      {isDepleted && <View style={[s.powerBadge, { backgroundColor: '#EF4444' }]}><Flame color="#FFF" size={10} /><Text style={s.powerBadgeText}>POWER: 0</Text></View>}
+      <View style={s.heroInfo}>
+        <Text style={s.heroName} numberOfLines={1}>{stack.isAnyRevealed ? stack.hero.name : '???'}</Text>
+        <View style={s.heroMeta}>
+          <View style={[s.rarityTag, { backgroundColor: stack.isAnyRevealed ? stack.hero.hero_rarities.color_hex + '25' : 'rgba(251,191,36,0.2)' }]}><Text style={[s.rarityText, { color: stack.isAnyRevealed ? stack.hero.hero_rarities.color_hex : theme.colors.primary }]}>{stack.isAnyRevealed ? stack.hero.hero_rarities.name : '???'}</Text></View>
+          <View style={s.heroMetaRight}>
+            <View style={s.scTag}><Coins color={theme.colors.primary} size={14} /><Text style={[s.scText, { color: theme.colors.primary }]}>{stack.isAnyRevealed ? `${stack.hero.hero_rarities.supercash_per_hour}/hr` : '???'}</Text></View>
+            <View style={[s.powerBar, { backgroundColor: 'rgba(255,255,255,0.2)' }]}><View style={[s.powerBarFill, { width: `${Math.min(100, avgPower)}%`, backgroundColor: avgPower > 50 ? '#22C55E' : avgPower > 20 ? '#F59E0B' : '#EF4444' }]} /><Text style={[s.powerText, { color: '#FFF' }]}>{Math.round(avgPower)}</Text></View>
+          </View>
+        </View>
+      </View>
+    </TouchableOpacity>
+  );
+};
+
+const HeroModal = ({ stack, theme, onClose, activating, deactivating, onActivate, onDeactivate }: any) => {
+  if (!stack) return null;
+  
+  // Add state to force re-render for real-time power updates
+  const [refreshKey, setRefreshKey] = useState(0);
+  
+  useEffect(() => {
+    const interval = setInterval(() => setRefreshKey((k: number) => k + 1), 5000); // Update every 5 seconds
+    return () => clearInterval(interval);
+  }, []);
+  
+  const activeInstances = stack.instances.filter((inst: any) => inst.is_active);
+  const allPowers = stack.instances.map((inst: any) => calculateCurrentPower(inst));
+  const activePowers = activeInstances.map((inst: any) => calculateCurrentPower(inst));
+  
+  // Calculate average power for active instances (for display)
+  const avgPower = activeInstances.length > 0 
+    ? activePowers.reduce((sum: number, p: number) => sum + p, 0) / activeInstances.length
+    : 0;
+  
+  // Total power of all instances
+  const totalPower = allPowers.reduce((sum: number, p: number) => sum + p, 0);
+  
+  // Minimum power among active instances
+  const minPower = activeInstances.length > 0
+    ? Math.min(...activePowers)
+    : 100;
+  
+  const hasActiveWithPower = activePowers.some((p: number) => p > 0);
+  const isDepleted = stack.isAnyActive && !hasActiveWithPower;
+  
+  return (
+    <Modal visible={!!stack} transparent animationType="fade" onRequestClose={onClose}>
+      <View style={[s.modalBg, { backgroundColor: theme.colors.overlay }]}>
+        <View style={[s.modalCard, { backgroundColor: theme.colors.modalBackground, borderColor: theme.colors.cardBorder }]}>
+          <TouchableOpacity style={s.closeBtn} onPress={onClose}><X color={theme.colors.textSecondary} size={24} /></TouchableOpacity>
+          {stack.count > 1 && <View style={[s.ownedBadge, { backgroundColor: theme.colors.primary }]}><Text style={s.ownedText}>{stack.count}X OWNED</Text></View>}
+          <SkeletonImage source={getHeroImageSource(stack.hero.image_url)} style={s.modalImg} />
+          <Text style={[s.modalName, { color: theme.colors.text }]}>{stack.hero.name}</Text>
+          <View style={[s.tierTag, { backgroundColor: stack.hero.hero_rarities.color_hex + '20' }]}><Text style={[s.tierText, { color: stack.hero.hero_rarities.color_hex }]}>{stack.hero.hero_rarities.name} (Tier {stack.hero.hero_rarities.tier})</Text></View>
+          <Text style={[s.desc, { color: theme.colors.textSecondary }]}>{stack.hero.hero_rarities.description}</Text>
+          
+          {stack.isAnyActive && (
+            <View style={[s.powerSection, { backgroundColor: theme.colors.surfaceSecondary }]}>
+              <View style={s.powerHeader}>
+                <Flame color={isDepleted ? '#EF4444' : '#F59E0B'} size={18} />
+                <Text style={[s.powerLabel, { color: theme.colors.text }]}>Power Level</Text>
+                <Text style={[s.powerValue, { color: isDepleted ? '#EF4444' : avgPower > 50 ? '#22C55E' : '#F59E0B' }]}>{Math.round(avgPower)} / 100</Text>
+              </View>
+              <View style={[s.powerBarLarge, { backgroundColor: theme.colors.surfaceSecondary }]}>
+                <View style={[s.powerBarFillLarge, { 
+                  width: `${Math.min(100, avgPower)}%`, 
+                  backgroundColor: isDepleted ? '#EF4444' : avgPower > 50 ? '#22C55E' : avgPower > 20 ? '#F59E0B' : '#EF4444' 
+                }]} />
+              </View>
+              {isDepleted && <Text style={[s.powerWarning, { color: '#EF4444' }]}>⚠️ Power depleted! Hero cannot produce SuperCash. Deactivate to preserve power.</Text>}
+              {activeInstances.length > 1 && <Text style={[s.powerSubtext, { color: theme.colors.textSecondary }]}>Min Power: {Math.round(minPower)} (decreasing 1/hr while active)</Text>}
+            </View>
+          )}
+          
+          <View style={s.modalStats}>
+            <ModalStat icon={Coins} color={theme.colors.primary} value={hasActiveWithPower ? (stack.count > 1 ? `${stack.activeCount}×${stack.hero.hero_rarities.supercash_per_hour}` : stack.hero.hero_rarities.supercash_per_hour) : 0} label="SC/hr" theme={theme} />
+            <ModalStat icon={Flame} color={theme.colors.purple} value={totalPower} label="Total Power" theme={theme} />
+            <ModalStat icon={Layers} color={theme.colors.info} value={`${stack.activeCount}/${stack.count}`} label="Active" theme={theme} />
+          </View>
+          
+          {stack.isAnyActive ? (
+            <>
+              {isDepleted ? (
+                <View style={[s.depletedRow, { backgroundColor: '#EF4444' + '20' }]}>
+                  <Flame color="#EF4444" size={20} />
+                  <Text style={[s.depletedInfo, { color: '#EF4444' }]}>All active heroes have 0 power. Collect to preserve!</Text>
+                </View>
+              ) : (
+                <View style={[s.activeRow, { backgroundColor: theme.colors.successLight }]}>
+                  <Check color={theme.colors.success} size={20} />
+                  <Text style={[s.activeInfo, { color: theme.colors.success }]}>{stack.activeCount} of {stack.count} Active & Earning</Text>
+                </View>
+              )}
+              <TouchableOpacity style={[s.deactBtn, { backgroundColor: theme.colors.errorLight, borderColor: `${theme.colors.error}50` }]} onPress={() => onDeactivate(stack.hero_id)} disabled={deactivating === stack.hero_id}>
+                {deactivating === stack.hero_id ? <ActivityIndicator color={theme.colors.error} size="small" /> : <><Zap color={theme.colors.error} size={16} /><Text style={[s.deactText, { color: theme.colors.error }]}>Deactivate All</Text></>}
+              </TouchableOpacity>
+            </>
+          ) : (
+            <TouchableOpacity style={s.actBtn} onPress={() => onActivate(stack.hero_id)} disabled={activating === stack.hero_id}>
+              <LinearGradient colors={theme.gradients.primary} style={s.actGrad}>
+                {activating === stack.hero_id ? <ActivityIndicator color="#0F172A" /> : <><Zap color="#0F172A" size={20} /><Text style={s.actText}>ACTIVATE ALL ({stack.count})</Text></>}
+              </LinearGradient>
+            </TouchableOpacity>
+          )}
+        </View>
+      </View>
+    </Modal>
+  );
+};
 
 const ModalStat = ({ icon: Icon, color, value, label, theme }: any) => (
   <View style={s.mStat}><Icon color={color} size={20} /><Text style={[s.mStatVal, { color: theme.colors.text }]}>{value}</Text><Text style={[s.mStatLbl, { color: theme.colors.textSecondary }]}>{label}</Text></View>
@@ -239,6 +363,22 @@ const s = StyleSheet.create({
   rarityText: { fontSize: 11, fontWeight: '700' },
   scTag: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: 'rgba(251,191,36,0.15)', paddingHorizontal: 8, paddingVertical: 5, borderRadius: 6 },
   scText: { fontSize: 12, fontWeight: '700' },
+  heroMetaRight: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  powerBadge: { position: 'absolute', top: 8, right: 8, zIndex: 10, flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 8, paddingVertical: 5, borderRadius: 8 },
+  powerBadgeText: { fontSize: 9, fontWeight: '800', color: '#FFF' },
+  powerBar: { height: 16, width: 60, borderRadius: 8, overflow: 'hidden', position: 'relative', justifyContent: 'center', alignItems: 'center' },
+  powerBarFill: { position: 'absolute', left: 0, top: 0, bottom: 0, borderRadius: 8 },
+  powerText: { fontSize: 9, fontWeight: '800', zIndex: 1 },
+  powerSection: { width: '100%', marginBottom: 16, padding: 12, borderRadius: 12 },
+  powerHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 },
+  powerLabel: { flex: 1, fontSize: 13, fontWeight: '600' },
+  powerValue: { fontSize: 15, fontWeight: '700' },
+  powerBarLarge: { height: 24, borderRadius: 12, overflow: 'hidden', marginBottom: 8 },
+  powerBarFillLarge: { height: '100%', borderRadius: 12 },
+  powerWarning: { fontSize: 11, fontWeight: '600', marginTop: 4, textAlign: 'center' },
+  powerSubtext: { fontSize: 10, textAlign: 'center' },
+  depletedRow: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 16, paddingVertical: 12, borderRadius: 10, width: '100%', justifyContent: 'center', marginBottom: 8 },
+  depletedInfo: { fontSize: 12, fontWeight: '600', textAlign: 'center' },
   modalBg: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 },
   modalCard: { borderRadius: 20, padding: 20, width: '100%', maxWidth: 340, alignItems: 'center', borderWidth: 1 },
   closeBtn: { position: 'absolute', top: 12, right: 12, zIndex: 10, padding: 6 },
