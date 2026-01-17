@@ -144,30 +144,14 @@ const calculateCurrentPower = (instance: any): number => {
   return Math.max(0, (instance.power_level || 100) - powerDecrease);
 };
 
-const HeroGridCard = ({ stack, theme, onPress }: any) => {
-  const avgPower = stack.instances.reduce((sum: number, inst: any) => sum + calculateCurrentPower(inst), 0) / stack.count;
-  const hasActiveWithPower = stack.instances.some((inst: any) => inst.is_active && calculateCurrentPower(inst) > 0);
-  const isDepleted = stack.isAnyActive && !hasActiveWithPower;
-  
-  return (
-    <TouchableOpacity style={[s.heroCard, { backgroundColor: theme.colors.card, borderColor: stack.isAnyRevealed ? (isDepleted ? '#EF4444' : stack.isAnyActive ? stack.hero.hero_rarities.color_hex : theme.colors.cardBorder) : theme.colors.primary }]} onPress={onPress} activeOpacity={0.85}>
-      <SkeletonImage source={getHeroImageSource(stack.hero.image_url)} style={s.heroImg} /><LinearGradient colors={theme.gradients.hero} locations={[0.1, 1]} style={StyleSheet.absoluteFillObject} />
-      {stack.count > 1 && <View style={[s.countBadge, { backgroundColor: theme.colors.primary }]}><Text style={s.countText}>{stack.count}X</Text></View>}
-      {stack.isAnyActive && stack.isAnyRevealed && !isDepleted && <View style={[s.activeBadge, { backgroundColor: theme.colors.success }]}><Sparkles color="#FFF" size={10} /><Text style={s.activeText}>ACTIVE</Text></View>}
-      {isDepleted && <View style={[s.powerBadge, { backgroundColor: '#EF4444' }]}><Flame color="#FFF" size={10} /><Text style={s.powerBadgeText}>POWER: 0</Text></View>}
-      <View style={s.heroInfo}>
-        <Text style={s.heroName} numberOfLines={1}>{stack.isAnyRevealed ? stack.hero.name : '???'}</Text>
-        <View style={s.heroMeta}>
-          <View style={[s.rarityTag, { backgroundColor: stack.isAnyRevealed ? stack.hero.hero_rarities.color_hex + '25' : 'rgba(251,191,36,0.2)' }]}><Text style={[s.rarityText, { color: stack.isAnyRevealed ? stack.hero.hero_rarities.color_hex : theme.colors.primary }]}>{stack.isAnyRevealed ? stack.hero.hero_rarities.name : '???'}</Text></View>
-          <View style={s.heroMetaRight}>
-            <View style={s.scTag}><Coins color={theme.colors.primary} size={14} /><Text style={[s.scText, { color: theme.colors.primary }]}>{stack.isAnyRevealed ? `${stack.hero.hero_rarities.supercash_per_hour}/hr` : '???'}</Text></View>
-            <View style={[s.powerBar, { backgroundColor: 'rgba(255,255,255,0.2)' }]}><View style={[s.powerBarFill, { width: `${Math.min(100, avgPower)}%`, backgroundColor: avgPower > 50 ? '#22C55E' : avgPower > 20 ? '#F59E0B' : '#EF4444' }]} /><Text style={[s.powerText, { color: '#FFF' }]}>{Math.round(avgPower)}</Text></View>
-          </View>
-        </View>
-      </View>
-    </TouchableOpacity>
-  );
-};
+const HeroGridCard = ({ stack, theme, onPress }: any) => (
+  <TouchableOpacity style={[s.heroCard, { backgroundColor: theme.colors.card, borderColor: stack.isAnyRevealed ? (stack.isAnyActive ? stack.hero.hero_rarities.color_hex : theme.colors.cardBorder) : theme.colors.primary }]} onPress={onPress} activeOpacity={0.85}>
+    <SkeletonImage source={getHeroImageSource(stack.hero.image_url)} style={s.heroImg} /><LinearGradient colors={theme.gradients.hero} locations={[0.1, 1]} style={StyleSheet.absoluteFillObject} />
+    {stack.count > 1 && <View style={[s.countBadge, { backgroundColor: theme.colors.primary }]}><Text style={s.countText}>{stack.count}X</Text></View>}
+    {stack.isAnyActive && stack.isAnyRevealed && <View style={[s.activeBadge, { backgroundColor: theme.colors.success }]}><Sparkles color="#FFF" size={10} /><Text style={s.activeText}>ACTIVE</Text></View>}
+    <View style={s.heroInfo}><Text style={s.heroName} numberOfLines={1}>{stack.isAnyRevealed ? stack.hero.name : '???'}</Text><View style={s.heroMeta}><View style={[s.rarityTag, { backgroundColor: stack.isAnyRevealed ? stack.hero.hero_rarities.color_hex + '25' : 'rgba(251,191,36,0.2)' }]}><Text style={[s.rarityText, { color: stack.isAnyRevealed ? stack.hero.hero_rarities.color_hex : theme.colors.primary }]}>{stack.isAnyRevealed ? stack.hero.hero_rarities.name : '???'}</Text></View><View style={s.scTag}><Coins color={theme.colors.primary} size={14} /><Text style={[s.scText, { color: theme.colors.primary }]}>{stack.isAnyRevealed ? `${stack.hero.hero_rarities.supercash_per_hour}/hr` : '???'}</Text></View></View></View>
+  </TouchableOpacity>
+);
 
 const HeroModal = ({ stack, theme, onClose, activating, deactivating, onActivate, onDeactivate }: any) => {
   if (!stack) return null;
@@ -199,66 +183,116 @@ const HeroModal = ({ stack, theme, onClose, activating, deactivating, onActivate
   
   const hasActiveWithPower = activePowers.some((p: number) => p > 0);
   const isDepleted = stack.isAnyActive && !hasActiveWithPower;
+
+  const sortedInstances = [...stack.instances].sort((a: any, b: any) => {
+    if (a.is_active !== b.is_active) return a.is_active ? -1 : 1;
+    const aPower = calculateCurrentPower(a);
+    const bPower = calculateCurrentPower(b);
+    return bPower - aPower;
+  });
+
+  const groupedByPower = sortedInstances.reduce((acc: Record<number, { power: number; total: number; active: number; idle: number; depleted: number }>, inst: any) => {
+    const power = calculateCurrentPower(inst);
+    if (!acc[power]) {
+      acc[power] = { power, total: 0, active: 0, idle: 0, depleted: 0 };
+    }
+    acc[power].total += 1;
+    if (!inst.is_active) {
+      acc[power].idle += 1;
+    } else if (power > 0) {
+      acc[power].active += 1;
+    } else {
+      acc[power].depleted += 1;
+    }
+    return acc;
+  }, {});
+
+  const groupedList = Object.values(groupedByPower).sort((a, b) => b.power - a.power);
   
   return (
     <Modal visible={!!stack} transparent animationType="fade" onRequestClose={onClose}>
       <View style={[s.modalBg, { backgroundColor: theme.colors.overlay }]}>
         <View style={[s.modalCard, { backgroundColor: theme.colors.modalBackground, borderColor: theme.colors.cardBorder }]}>
           <TouchableOpacity style={s.closeBtn} onPress={onClose}><X color={theme.colors.textSecondary} size={24} /></TouchableOpacity>
-          {stack.count > 1 && <View style={[s.ownedBadge, { backgroundColor: theme.colors.primary }]}><Text style={s.ownedText}>{stack.count}X OWNED</Text></View>}
-          <SkeletonImage source={getHeroImageSource(stack.hero.image_url)} style={s.modalImg} />
-          <Text style={[s.modalName, { color: theme.colors.text }]}>{stack.hero.name}</Text>
-          <View style={[s.tierTag, { backgroundColor: stack.hero.hero_rarities.color_hex + '20' }]}><Text style={[s.tierText, { color: stack.hero.hero_rarities.color_hex }]}>{stack.hero.hero_rarities.name} (Tier {stack.hero.hero_rarities.tier})</Text></View>
-          <Text style={[s.desc, { color: theme.colors.textSecondary }]}>{stack.hero.hero_rarities.description}</Text>
-          
-          {stack.isAnyActive && (
-            <View style={[s.powerSection, { backgroundColor: theme.colors.surfaceSecondary }]}>
-              <View style={s.powerHeader}>
-                <Flame color={isDepleted ? '#EF4444' : '#F59E0B'} size={18} />
-                <Text style={[s.powerLabel, { color: theme.colors.text }]}>Power Level</Text>
-                <Text style={[s.powerValue, { color: isDepleted ? '#EF4444' : avgPower > 50 ? '#22C55E' : '#F59E0B' }]}>{Math.round(avgPower)} / 100</Text>
+          <ScrollView style={s.modalScroll} contentContainerStyle={s.modalScrollContent} showsVerticalScrollIndicator={false}>
+            {stack.count > 1 && <View style={[s.ownedBadge, { backgroundColor: theme.colors.primary }]}><Text style={s.ownedText}>{stack.count}X OWNED</Text></View>}
+            <SkeletonImage source={getHeroImageSource(stack.hero.image_url)} style={s.modalImg} />
+            <Text style={[s.modalName, { color: theme.colors.text }]}>{stack.hero.name}</Text>
+            <View style={[s.tierTag, { backgroundColor: stack.hero.hero_rarities.color_hex + '20' }]}><Text style={[s.tierText, { color: stack.hero.hero_rarities.color_hex }]}>{stack.hero.hero_rarities.name} (Tier {stack.hero.hero_rarities.tier})</Text></View>
+            <Text style={[s.desc, { color: theme.colors.textSecondary }]}>{stack.hero.hero_rarities.description}</Text>
+            
+            {stack.isAnyActive && (
+              <View style={[s.powerSection, { backgroundColor: theme.colors.surfaceSecondary }]}>
+                <View style={s.powerHeader}>
+                  <Flame color={isDepleted ? '#EF4444' : '#F59E0B'} size={18} />
+                  <Text style={[s.powerLabel, { color: theme.colors.text }]}>Power Level</Text>
+                  <Text style={[s.powerValue, { color: isDepleted ? '#EF4444' : avgPower > 50 ? '#22C55E' : '#F59E0B' }]}>{Math.round(avgPower)} / 100</Text>
+                </View>
+                <View style={[s.powerBarLarge, { backgroundColor: theme.colors.surfaceSecondary }]}>
+                  <View style={[s.powerBarFillLarge, { 
+                    width: `${Math.min(100, avgPower)}%`, 
+                    backgroundColor: isDepleted ? '#EF4444' : avgPower > 50 ? '#22C55E' : avgPower > 20 ? '#F59E0B' : '#EF4444' 
+                  }]} />
+                </View>
+                {isDepleted && <Text style={[s.powerWarning, { color: '#EF4444' }]}>⚠️ Power depleted! Hero cannot produce SuperCash. Deactivate to preserve power.</Text>}
+                {activeInstances.length > 1 && <Text style={[s.powerSubtext, { color: theme.colors.textSecondary }]}>Min Power: {Math.round(minPower)} (decreasing 1/hr while active)</Text>}
               </View>
-              <View style={[s.powerBarLarge, { backgroundColor: theme.colors.surfaceSecondary }]}>
-                <View style={[s.powerBarFillLarge, { 
-                  width: `${Math.min(100, avgPower)}%`, 
-                  backgroundColor: isDepleted ? '#EF4444' : avgPower > 50 ? '#22C55E' : avgPower > 20 ? '#F59E0B' : '#EF4444' 
-                }]} />
-              </View>
-              {isDepleted && <Text style={[s.powerWarning, { color: '#EF4444' }]}>⚠️ Power depleted! Hero cannot produce SuperCash. Deactivate to preserve power.</Text>}
-              {activeInstances.length > 1 && <Text style={[s.powerSubtext, { color: theme.colors.textSecondary }]}>Min Power: {Math.round(minPower)} (decreasing 1/hr while active)</Text>}
+            )}
+            
+            <View style={s.modalStats}>
+              <ModalStat icon={Coins} color={theme.colors.primary} value={hasActiveWithPower ? (stack.count > 1 ? `${stack.activeCount}×${stack.hero.hero_rarities.supercash_per_hour}` : stack.hero.hero_rarities.supercash_per_hour) : 0} label="SC/hr" theme={theme} />
+              <ModalStat icon={Flame} color={theme.colors.purple} value={totalPower} label="Total Power" theme={theme} />
+              <ModalStat icon={Layers} color={theme.colors.info} value={`${stack.activeCount}/${stack.count}`} label="Active" theme={theme} />
             </View>
-          )}
-          
-          <View style={s.modalStats}>
-            <ModalStat icon={Coins} color={theme.colors.primary} value={hasActiveWithPower ? (stack.count > 1 ? `${stack.activeCount}×${stack.hero.hero_rarities.supercash_per_hour}` : stack.hero.hero_rarities.supercash_per_hour) : 0} label="SC/hr" theme={theme} />
-            <ModalStat icon={Flame} color={theme.colors.purple} value={totalPower} label="Total Power" theme={theme} />
-            <ModalStat icon={Layers} color={theme.colors.info} value={`${stack.activeCount}/${stack.count}`} label="Active" theme={theme} />
-          </View>
-          
-          {stack.isAnyActive ? (
-            <>
-              {isDepleted ? (
-                <View style={[s.depletedRow, { backgroundColor: '#EF4444' + '20' }]}>
-                  <Flame color="#EF4444" size={20} />
-                  <Text style={[s.depletedInfo, { color: '#EF4444' }]}>All active heroes have 0 power. Collect to preserve!</Text>
-                </View>
-              ) : (
-                <View style={[s.activeRow, { backgroundColor: theme.colors.successLight }]}>
-                  <Check color={theme.colors.success} size={20} />
-                  <Text style={[s.activeInfo, { color: theme.colors.success }]}>{stack.activeCount} of {stack.count} Active & Earning</Text>
-                </View>
-              )}
-              <TouchableOpacity style={[s.deactBtn, { backgroundColor: theme.colors.errorLight, borderColor: `${theme.colors.error}50` }]} onPress={() => onDeactivate(stack.hero_id)} disabled={deactivating === stack.hero_id}>
-                {deactivating === stack.hero_id ? <ActivityIndicator color={theme.colors.error} size="small" /> : <><Zap color={theme.colors.error} size={16} /><Text style={[s.deactText, { color: theme.colors.error }]}>Deactivate All</Text></>}
+
+            <View style={s.instanceList}>
+              <Text style={[s.instanceTitle, { color: theme.colors.textSecondary }]}>Instances</Text>
+              {groupedList.map(group => {
+                const statusParts = [
+                  group.active > 0 ? `${group.active} Active` : null,
+                  group.idle > 0 ? `${group.idle} Idle` : null,
+                  group.depleted > 0 ? `${group.depleted} Depleted` : null,
+                ].filter(Boolean).join(' • ');
+                return (
+                  <View key={group.power} style={[s.instanceRow, { borderColor: theme.colors.cardBorder }]}>
+                  <Text style={[s.instanceIndex, { color: theme.colors.textSecondary }]} numberOfLines={1}>{group.total}x</Text>
+                    <View style={s.instanceStatus}>
+                      <Text style={[s.instanceStatusText, { color: theme.colors.textSecondary }]}>{statusParts || 'Idle'}</Text>
+                    </View>
+                    <View style={s.instancePower}>
+                      <Flame color={theme.colors.primary} size={12} />
+                      <Text style={[s.instancePowerText, { color: theme.colors.text }]}>{group.power}</Text>
+                    </View>
+                  </View>
+                );
+              })}
+            </View>
+            
+            {stack.isAnyActive ? (
+              <>
+                {isDepleted ? (
+                  <View style={[s.depletedRow, { backgroundColor: '#EF4444' + '20' }]}>
+                    <Flame color="#EF4444" size={20} />
+                    <Text style={[s.depletedInfo, { color: '#EF4444' }]}>All active heroes have 0 power. Collect to preserve!</Text>
+                  </View>
+                ) : (
+                  <View style={[s.activeRow, { backgroundColor: theme.colors.successLight }]}>
+                    <Check color={theme.colors.success} size={20} />
+                    <Text style={[s.activeInfo, { color: theme.colors.success }]}>{stack.activeCount} of {stack.count} Active & Earning</Text>
+                  </View>
+                )}
+                <TouchableOpacity style={[s.deactBtn, { backgroundColor: theme.colors.errorLight, borderColor: `${theme.colors.error}50` }]} onPress={() => onDeactivate(stack.hero_id)} disabled={deactivating === stack.hero_id}>
+                  {deactivating === stack.hero_id ? <ActivityIndicator color={theme.colors.error} size="small" /> : <><Zap color={theme.colors.error} size={16} /><Text style={[s.deactText, { color: theme.colors.error }]}>Deactivate All</Text></>}
+                </TouchableOpacity>
+              </>
+            ) : (
+              <TouchableOpacity style={s.actBtn} onPress={() => onActivate(stack.hero_id)} disabled={activating === stack.hero_id}>
+                <LinearGradient colors={theme.gradients.primary} style={s.actGrad}>
+                  {activating === stack.hero_id ? <ActivityIndicator color="#0F172A" /> : <><Zap color="#0F172A" size={20} /><Text style={s.actText}>ACTIVATE ALL ({stack.count})</Text></>}
+                </LinearGradient>
               </TouchableOpacity>
-            </>
-          ) : (
-            <TouchableOpacity style={s.actBtn} onPress={() => onActivate(stack.hero_id)} disabled={activating === stack.hero_id}>
-              <LinearGradient colors={theme.gradients.primary} style={s.actGrad}>
-                {activating === stack.hero_id ? <ActivityIndicator color="#0F172A" /> : <><Zap color="#0F172A" size={20} /><Text style={s.actText}>ACTIVATE ALL ({stack.count})</Text></>}
-              </LinearGradient>
-            </TouchableOpacity>
-          )}
+            )}
+          </ScrollView>
         </View>
       </View>
     </Modal>
@@ -363,12 +397,6 @@ const s = StyleSheet.create({
   rarityText: { fontSize: 11, fontWeight: '700' },
   scTag: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: 'rgba(251,191,36,0.15)', paddingHorizontal: 8, paddingVertical: 5, borderRadius: 6 },
   scText: { fontSize: 12, fontWeight: '700' },
-  heroMetaRight: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  powerBadge: { position: 'absolute', top: 8, right: 8, zIndex: 10, flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 8, paddingVertical: 5, borderRadius: 8 },
-  powerBadgeText: { fontSize: 9, fontWeight: '800', color: '#FFF' },
-  powerBar: { height: 16, width: 60, borderRadius: 8, overflow: 'hidden', position: 'relative', justifyContent: 'center', alignItems: 'center' },
-  powerBarFill: { position: 'absolute', left: 0, top: 0, bottom: 0, borderRadius: 8 },
-  powerText: { fontSize: 9, fontWeight: '800', zIndex: 1 },
   powerSection: { width: '100%', marginBottom: 16, padding: 12, borderRadius: 12 },
   powerHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 },
   powerLabel: { flex: 1, fontSize: 13, fontWeight: '600' },
@@ -377,10 +405,20 @@ const s = StyleSheet.create({
   powerBarFillLarge: { height: '100%', borderRadius: 12 },
   powerWarning: { fontSize: 11, fontWeight: '600', marginTop: 4, textAlign: 'center' },
   powerSubtext: { fontSize: 10, textAlign: 'center' },
+  instanceList: { width: '100%', marginBottom: 12 },
+  instanceTitle: { fontSize: 11, fontWeight: '700', marginBottom: 6, textTransform: 'uppercase', letterSpacing: 0.5 },
+  instanceRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 8, paddingHorizontal: 10, borderRadius: 10, borderWidth: 1, marginBottom: 6 },
+  instanceIndex: { fontSize: 11, fontWeight: '700', width: 36, textAlign: 'center' },
+  instanceStatus: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 },
+  instanceStatusText: { fontSize: 10, fontWeight: '700' },
+  instancePower: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  instancePowerText: { fontSize: 12, fontWeight: '700' },
   depletedRow: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 16, paddingVertical: 12, borderRadius: 10, width: '100%', justifyContent: 'center', marginBottom: 8 },
   depletedInfo: { fontSize: 12, fontWeight: '600', textAlign: 'center' },
   modalBg: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 },
-  modalCard: { borderRadius: 20, padding: 20, width: '100%', maxWidth: 340, alignItems: 'center', borderWidth: 1 },
+  modalCard: { borderRadius: 20, padding: 20, width: '100%', maxWidth: 340, maxHeight: height * 0.85, alignItems: 'center', borderWidth: 1 },
+  modalScroll: { width: '100%' },
+  modalScrollContent: { alignItems: 'center', paddingBottom: 8 },
   closeBtn: { position: 'absolute', top: 12, right: 12, zIndex: 10, padding: 6 },
   ownedBadge: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, marginBottom: 12 },
   ownedText: { fontSize: 12, fontWeight: '800', color: '#0F172A' },
