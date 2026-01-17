@@ -158,6 +158,7 @@ const HeroModal = ({ stack, theme, onClose, activating, deactivating, onActivate
   
   // Add state to force re-render for real-time power updates
   const [refreshKey, setRefreshKey] = useState(0);
+  const [showActivateAllConfirm, setShowActivateAllConfirm] = useState(false);
   
   useEffect(() => {
     const interval = setInterval(() => setRefreshKey((k: number) => k + 1), 5000); // Update every 5 seconds
@@ -276,10 +277,15 @@ const HeroModal = ({ stack, theme, onClose, activating, deactivating, onActivate
                     <Text style={[s.depletedInfo, { color: '#EF4444' }]}>All active heroes have 0 power. Collect to preserve!</Text>
                   </View>
                 ) : (
-                  <View style={[s.activeRow, { backgroundColor: theme.colors.successLight }]}>
+                  <TouchableOpacity
+                    style={[s.activeRow, { backgroundColor: theme.colors.successLight }]}
+                    activeOpacity={0.8}
+                    disabled={stack.activeCount >= stack.count}
+                    onPress={() => setShowActivateAllConfirm(true)}
+                  >
                     <Check color={theme.colors.success} size={20} />
                     <Text style={[s.activeInfo, { color: theme.colors.success }]}>{stack.activeCount} of {stack.count} Active & Earning</Text>
-                  </View>
+                  </TouchableOpacity>
                 )}
                 <TouchableOpacity style={[s.deactBtn, { backgroundColor: theme.colors.errorLight, borderColor: `${theme.colors.error}50` }]} onPress={() => onDeactivate(stack.hero_id)} disabled={deactivating === stack.hero_id}>
                   {deactivating === stack.hero_id ? <ActivityIndicator color={theme.colors.error} size="small" /> : <><Zap color={theme.colors.error} size={16} /><Text style={[s.deactText, { color: theme.colors.error }]}>Deactivate All</Text></>}
@@ -293,6 +299,26 @@ const HeroModal = ({ stack, theme, onClose, activating, deactivating, onActivate
               </TouchableOpacity>
             )}
           </ScrollView>
+          <Modal visible={showActivateAllConfirm} transparent animationType="fade" onRequestClose={() => setShowActivateAllConfirm(false)}>
+            <View style={[s.modalBg, { backgroundColor: theme.colors.overlay }]}>
+              <View style={[s.confirmCard, { backgroundColor: theme.colors.modalBackground, borderColor: theme.colors.cardBorder }]}>
+                <Text style={[s.confirmTitle, { color: theme.colors.text }]}>Activate all heroes?</Text>
+                <Text style={[s.confirmSub, { color: theme.colors.textSecondary }]}>This will activate all copies of this hero.</Text>
+                <TouchableOpacity
+                  style={s.actBtn}
+                  onPress={() => { setShowActivateAllConfirm(false); onActivate(stack.hero_id); }}
+                >
+                  <LinearGradient colors={theme.gradients.primary} style={s.actGrad}>
+                    <Zap color="#0F172A" size={16} />
+                    <Text style={s.actText}>ACTIVATE ALL ({stack.count})</Text>
+                  </LinearGradient>
+                </TouchableOpacity>
+                <TouchableOpacity onPress={() => setShowActivateAllConfirm(false)} style={s.confirmCancel}>
+                  <Text style={[s.confirmCancelText, { color: theme.colors.textSecondary }]}>Cancel</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </Modal>
         </View>
       </View>
     </Modal>
@@ -419,6 +445,11 @@ const s = StyleSheet.create({
   modalCard: { borderRadius: 20, padding: 20, width: '100%', maxWidth: 340, maxHeight: height * 0.85, alignItems: 'center', borderWidth: 1 },
   modalScroll: { width: '100%' },
   modalScrollContent: { alignItems: 'center', paddingBottom: 8 },
+  confirmCard: { borderRadius: 16, padding: 16, width: '100%', maxWidth: 320, borderWidth: 1, alignItems: 'center' },
+  confirmTitle: { fontSize: 16, fontWeight: '800', marginBottom: 6 },
+  confirmSub: { fontSize: 12, textAlign: 'center', lineHeight: 18, marginBottom: 16 },
+  confirmCancel: { marginTop: 10, paddingVertical: 6, paddingHorizontal: 12 },
+  confirmCancelText: { fontSize: 12, fontWeight: '600' },
   closeBtn: { position: 'absolute', top: 12, right: 12, zIndex: 10, padding: 6 },
   ownedBadge: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, marginBottom: 12 },
   ownedText: { fontSize: 12, fontWeight: '800', color: '#0F172A' },
