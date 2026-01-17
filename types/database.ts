@@ -24,9 +24,9 @@ export interface Database {
         Relationships: [{ foreignKeyName: "heroes_rarity_id_fkey"; columns: ["rarity_id"]; isOneToOne: false; referencedRelation: "hero_rarities"; referencedColumns: ["id"]; }];
       };
       user_heroes: {
-        Row: { id: string; user_id: string; hero_id: string; is_active: boolean; is_revealed: boolean; activated_at: string | null; last_collected_at: string | null; acquired_at: string; };
-        Insert: { id?: string; user_id: string; hero_id: string; is_active?: boolean; is_revealed?: boolean; activated_at?: string | null; last_collected_at?: string | null; acquired_at?: string; };
-        Update: { id?: string; user_id?: string; hero_id?: string; is_active?: boolean; is_revealed?: boolean; activated_at?: string | null; last_collected_at?: string | null; acquired_at?: string; };
+        Row: { id: string; user_id: string; hero_id: string; is_active: boolean; is_revealed: boolean; activated_at: string | null; last_collected_at: string | null; acquired_at: string; power_level: number; last_power_update: string; };
+        Insert: { id?: string; user_id: string; hero_id: string; is_active?: boolean; is_revealed?: boolean; activated_at?: string | null; last_collected_at?: string | null; acquired_at?: string; power_level?: number; last_power_update?: string; };
+        Update: { id?: string; user_id?: string; hero_id?: string; is_active?: boolean; is_revealed?: boolean; activated_at?: string | null; last_collected_at?: string | null; acquired_at?: string; power_level?: number; last_power_update?: string; };
         Relationships: [{ foreignKeyName: "user_heroes_user_id_fkey"; columns: ["user_id"]; isOneToOne: false; referencedRelation: "profiles"; referencedColumns: ["id"]; }, { foreignKeyName: "user_heroes_hero_id_fkey"; columns: ["hero_id"]; isOneToOne: false; referencedRelation: "heroes"; referencedColumns: ["id"]; }];
       };
       transactions: {
@@ -60,6 +60,8 @@ export type StackedHero = {
   isAnyRevealed: boolean;
   instances: UserHeroWithDetails[];
   primaryInstance: UserHeroWithDetails;
+  totalPower: number;
+  activePower: number;
 };
 
 export type Transaction = Database['public']['Tables']['transactions']['Row'];
