@@ -1,14 +1,14 @@
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
 
-export type TransactionType = 'send' | 'receive' | 'collect' | 'mystery_box' | 'referral_bonus' | 'daily_bonus' | 'quest_reward' | 'admin_bonus';
+export type TransactionType = 'send' | 'receive' | 'collect' | 'mystery_box' | 'referral_bonus' | 'daily_bonus' | 'quest_reward' | 'admin_bonus' | 'daily_spin';
 
 export interface Database {
   public: {
     Tables: {
       profiles: {
-        Row: { id: string; username: string | null; supercash_balance: number; has_claimed_free_hero: boolean; referral_code: string | null; referred_by: string | null; referral_bonus_claimed: boolean; created_at: string; updated_at: string; };
-        Insert: { id: string; username?: string | null; supercash_balance?: number; has_claimed_free_hero?: boolean; referral_code?: string | null; referred_by?: string | null; referral_bonus_claimed?: boolean; created_at?: string; updated_at?: string; };
-        Update: { id?: string; username?: string | null; supercash_balance?: number; has_claimed_free_hero?: boolean; referral_code?: string | null; referred_by?: string | null; referral_bonus_claimed?: boolean; created_at?: string; updated_at?: string; };
+        Row: { id: string; username: string | null; supercash_balance: number; has_claimed_free_hero: boolean; referral_code: string | null; referred_by: string | null; referral_bonus_claimed: boolean; last_spin_at: string | null; created_at: string; updated_at: string; };
+        Insert: { id: string; username?: string | null; supercash_balance?: number; has_claimed_free_hero?: boolean; referral_code?: string | null; referred_by?: string | null; referral_bonus_claimed?: boolean; last_spin_at?: string | null; created_at?: string; updated_at?: string; };
+        Update: { id?: string; username?: string | null; supercash_balance?: number; has_claimed_free_hero?: boolean; referral_code?: string | null; referred_by?: string | null; referral_bonus_claimed?: boolean; last_spin_at?: string | null; created_at?: string; updated_at?: string; };
         Relationships: [];
       };
       hero_rarities: {

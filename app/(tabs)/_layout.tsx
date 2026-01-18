@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { Tabs, usePathname } from 'expo-router';
 import { View, Text, Platform, TouchableOpacity, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Home, Users, Settings, Trophy, Coins, Sun, Moon } from 'lucide-react-native';
+import { Home, Users, Settings, Trophy, Coins, Sun, Moon, Gift } from 'lucide-react-native';
 import { GameProvider, useGame } from '@/contexts/GameContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
@@ -13,6 +13,7 @@ const PAGE_INFO: Record<string, { title: string; icon: typeof Home }> = {
   '/index': { title: 'Home', icon: Home },
   '/heroes': { title: 'My Heroes', icon: Users },
   '/leaderboard': { title: 'Leaderboard', icon: Trophy },
+  '/daily-spin': { title: 'Daily Spin', icon: Gift },
   '/settings': { title: 'Settings', icon: Settings },
 };
 
@@ -51,7 +52,7 @@ function TabLayoutContent() {
   }), [theme, isIOS]);
 
   return (
-    <View style={[s.container, { backgroundColor: theme.colors.background }]}><SafeAreaView edges={['top']} style={{ backgroundColor: theme.colors.surface }}><Header /></SafeAreaView><View style={s.flex1}><Tabs screenOptions={screenOptions}><Tabs.Screen name="index" options={{ title: 'Home', tabBarIcon: ({ color, focused }) => <TabBarIcon icon={Home} color={color} focused={focused} /> }} /><Tabs.Screen name="heroes" options={{ title: 'My Heroes', tabBarIcon: ({ color, focused }) => <TabBarIcon icon={Users} color={color} focused={focused} /> }} /><Tabs.Screen name="leaderboard" options={{ title: 'Ranks', tabBarIcon: ({ color, focused }) => <TabBarIcon icon={Trophy} color={color} focused={focused} /> }} /><Tabs.Screen name="settings" options={{ title: 'Settings', tabBarIcon: ({ color, focused }) => <TabBarIcon icon={Settings} color={color} focused={focused} /> }} /></Tabs></View></View>
+    <View style={[s.container, { backgroundColor: theme.colors.background }]}><SafeAreaView edges={['top']} style={{ backgroundColor: theme.colors.surface }}><Header /></SafeAreaView><View style={s.flex1}><Tabs screenOptions={screenOptions}><Tabs.Screen name="index" options={{ title: 'Home', tabBarIcon: ({ color, focused }) => <TabBarIcon icon={Home} color={color} focused={focused} /> }} /><Tabs.Screen name="heroes" options={{ title: 'My Heroes', tabBarIcon: ({ color, focused }) => <TabBarIcon icon={Users} color={color} focused={focused} /> }} /><Tabs.Screen name="leaderboard" options={{ title: 'Ranks', tabBarIcon: ({ color, focused }) => <TabBarIcon icon={Trophy} color={color} focused={focused} /> }} /><Tabs.Screen name="daily-spin" options={{ title: 'Spin', tabBarIcon: ({ color, focused }) => <TabBarIcon icon={Gift} color={color} focused={focused} /> }} /><Tabs.Screen name="settings" options={{ title: 'Settings', tabBarIcon: ({ color, focused }) => <TabBarIcon icon={Settings} color={color} focused={focused} /> }} /></Tabs></View></View>
   );
 }
 

@@ -16,10 +16,10 @@ import { Transaction, TransactionType } from '@/types/database';
 const { width, height } = Dimensions.get('window');
 const backgroundImage = require('@/assets/home_bg.jpg');
 
-const TX_ICONS: Record<TransactionType, any> = { send: ArrowUpRight, receive: ArrowDownLeft, collect: Sparkles, mystery_box: Gift, referral_bonus: User, daily_bonus: Target, quest_reward: Target, admin_bonus: Gift };
+const TX_ICONS: Record<TransactionType, any> = { send: ArrowUpRight, receive: ArrowDownLeft, collect: Sparkles, mystery_box: Gift, referral_bonus: User, daily_bonus: Target, quest_reward: Target, admin_bonus: Gift, daily_spin: Sparkles };
 const TX_LABELS: Record<TransactionType, (u?: string | null) => string> = {
   send: u => `Sent to ${u || 'User'}`, receive: u => `Received from ${u || 'User'}`, collect: () => 'Hero Earnings',
-  mystery_box: () => 'Mystery Box', referral_bonus: () => 'Referral Bonus', daily_bonus: () => 'Daily Bonus', quest_reward: () => 'Quest Reward', admin_bonus: () => 'Bonus'
+  mystery_box: () => 'Mystery Box', referral_bonus: () => 'Referral Bonus', daily_bonus: () => 'Daily Bonus', quest_reward: () => 'Quest Reward', admin_bonus: () => 'Bonus', daily_spin: () => 'Daily Spin Reward'
 };
 
 export default function HomeScreen() {
